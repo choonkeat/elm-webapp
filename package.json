@@ -1,0 +1,30 @@
+{
+  "bin": {
+    "elm-fullstack-init": "./bin/elm-fullstack-init"
+  },
+  "name": "elm-fullstack-init",
+  "version": "1.0.0",
+  "description": "cli to initialize an elm-fullstack app",
+  "main": "bin/elm-fullstack-init",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/choonkeat/elm-fullstack.git"
+  },
+  "keywords": [
+    "elm",
+    "fullstack",
+    "elm-fullstack",
+    "http",
+    "client",
+    "server"
+  ],
+  "author": "choonkeat",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/choonkeat/elm-fullstack/issues"
+  },
+  "homepage": "https://github.com/choonkeat/elm-fullstack#readme"
+}

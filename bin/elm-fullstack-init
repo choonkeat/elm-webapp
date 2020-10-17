@@ -1,0 +1,494 @@
+#!/usr/bin/env node
+
+const path = require('path')
+var dst = process.argv[2]
+if (!dst) {
+  console.log('usage:', path.basename(process.argv[1]), '<directory to initialize>')
+  process.exit(1)
+}
+console.log('Initializing', dst, '...\n')
+const src = path.join(dst, 'src')
+
+const fs = require('fs')
+fs.mkdirSync(dst)
+fs.mkdirSync(src)
+fs.writeFileSync(dst + `/Makefile`, `run: compile
+	node index.js
+
+compile: elm.json package.json build/Server.js public/assets/client.js
+
+build/Server.js: src/Server.elm
+	elm make src/Server.elm --output build/Server.js
+
+public/assets/client.js: src/Client.elm
+	elm make src/Client.elm --output public/assets/client.js
+
+#
+
+install: elm.json package.json
+	elm install elm/url
+	elm install elm/json
+	elm install elm/http
+	elm install elm/time
+	elm install choonkeat/elm-fullstack
+
+elm.json:
+	elm init
+
+package.json:
+	npm init -y && npm install --save xhr2 full-url node-static
+`)
+
+fs.writeFileSync(dst + `/index.js`, `global.XMLHttpRequest = require('xhr2')
+
+// define http server
+const http = require('http')
+const fullUrl = require('full-url')
+const nodeStatic = require('node-static')
+const fileServer = new nodeStatic.Server('./public')
+
+function httpServer (app) {
+  if (!app.ports) return console.log('no ports!')
+
+  // Start http server, accept requests and pass to Elm
+  const server = http.createServer((req, res) => {
+    let body = [] // https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/#request-body
+    req.on('data', (chunk) => {
+      body.push(chunk)
+    }).on('end', () => {
+      fileServer.serve(req, res, function (e) {
+        // if static file is found by fileServer, serve it
+        if (!e || e.status !== 404) return
+
+        // otherwise, Fullstack.Server will handle the request
+        let contentType = req.headers['content-type'] || ''
+        let encoding = (contentType.match(/; charset=(\\S+)/) || ['', 'utf8'])[1] // charset or default to "utf8"
+        let bodyString = Buffer.concat(body).toString(encoding)
+        app.ports.onHttpRequest.send({
+          response: res, // this value will be used by "onHttpResponse" below
+          method: req.method,
+          url: fullUrl(req),
+          path: req.url,
+          body: bodyString,
+          headers: req.headers
+        })
+      })
+    }).resume()
+  })
+
+  app.ports.onHttpResponse.subscribe(({ statusCode, body, headers, request }) => {
+    console.log('[http] onHttpResponse status=', statusCode, Buffer.byteLength(body), 'bytes')
+    request.response.writeHead(statusCode, { ...headers, 'Content-Length': Buffer.byteLength(body) })
+    request.response.end(body)
+  })
+
+  var port = process.env.PORT || 8000
+  server.listen(port)
+  console.log('[http] server listening at', port, '...')
+
+  const shutdown = () => {
+    console.info('[http] signal received.')
+    server.close(() => {
+      console.log('[http] server closed.')
+      process.exit(0) // not great, but there are Timers dangling and won't quit
+    })
+  }
+
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
+}
+
+// regular elm initialization
+const { Elm } = require('./build/Server.js')
+httpServer(Elm.Server.init({
+  flags: {}
+}))
+`)
+
+fs.writeFileSync(src + `/Server.elm`, `port module Server exposing (..)
+
+import Fullstack.Server
+import Fullstack.Server.HTTP exposing (Method(..), StatusCode(..))
+import Json.Decode
+import Json.Encode
+import Platform exposing (Task)
+import Task
+import Time
+import Types exposing (MsgFromServer)
+import Url
+
+
+port onHttpRequest : (Json.Encode.Value -> msg) -> Sub msg
+
+
+port onHttpResponse : Json.Encode.Value -> Cmd msg
+
+
+writeResponse =
+    Fullstack.Server.writeResponse onHttpResponse
+
+
+main =
+    Fullstack.Server.instance
+        { worker =
+            { init = init
+            , update = update
+            , subscriptions = subscriptions
+            }
+        , ports =
+            { writeResponse = writeResponse
+            , onHttpRequest = onHttpRequest
+            }
+        , protocol =
+            { routeDecoder = routeDecoder
+            , updateFromRoute = updateFromHttp
+            , updateFromClient = updateFromClient
+            , serverMsgEncoder = Types.encodeTypesMsgFromServer
+            , clientMsgDecoder = Types.decodeTypesMsgFromClient
+            , headerDecoder = headerDecoder
+            , errorEncoder = Json.Encode.string
+            }
+        }
+
+
+type alias Flags =
+    {}
+
+
+type alias ServerState =
+    { greeting : String
+    }
+
+
+type Msg
+    = Msg
+
+
+init : Flags -> ( ServerState, Cmd Msg )
+init flags =
+    let
+        serverState =
+            { greeting = "Hello world" }
+
+        cmd =
+            Cmd.none
+    in
+    ( serverState, cmd )
+
+
+update : Msg -> ServerState -> ( ServerState, Cmd Msg )
+update msg serverState =
+    case msg of
+        Msg ->
+            ( serverState, Cmd.none )
+
+
+type Endpoint
+    = Homepage
+
+
+routeDecoder : Url.Url -> Maybe Endpoint
+routeDecoder urlUrl =
+    case urlUrl.path of
+        "/" ->
+            Just Homepage
+
+        _ ->
+            Nothing
+
+
+updateFromHttp : ( Fullstack.Server.HTTP.Method, Types.RequestContext, Maybe Endpoint ) -> Time.Posix -> Fullstack.Server.HTTP.Request -> ServerState -> ( ServerState, Cmd Msg )
+updateFromHttp ( method, ctx, endpoint ) now request serverState =
+    case ( method, ctx, endpoint ) of
+        ( GET, _, _ ) ->
+            ( serverState
+            , writeResponse request
+                { statusCode = StatusOK
+                , body = spaHtml
+                , headers =
+                    [ ( "Content-Type", Json.Encode.string "text/html; charset=utf-8" )
+                    , ( "Cache-Control", Json.Encode.string "max-age=0" )
+                    ]
+                }
+            )
+
+        -- TODO: possibly a (POST, _, Login) to "Set-Cookie"
+        ( _, _, _ ) ->
+            ( serverState
+            , writeResponse request { statusCode = StatusNotFound, body = "Not found?", headers = [] }
+            )
+
+
+updateFromClient : Types.RequestContext -> Time.Posix -> Types.MsgFromClient -> ServerState -> ( ServerState, Task String MsgFromServer )
+updateFromClient ctx now clientMsg serverState =
+    case clientMsg of
+        Types.SetGreeting s ->
+            ( { serverState | greeting = s }
+            , Task.succeed (Types.CurrentGreeting ("You said: <" ++ s ++ "> at " ++ Debug.toString now))
+            )
+
+
+subscriptions : ServerState -> Sub Msg
+subscriptions serverState =
+    Sub.none
+
+
+
+--
+
+
+headerDecoder : Json.Decode.Decoder Types.RequestContext
+headerDecoder =
+    Json.Decode.oneOf
+        [ Json.Decode.map Types.Cookied (Json.Decode.field "cookie" Json.Decode.string)
+        , Json.Decode.succeed Types.Anonymous
+        ]
+
+
+spaHtml =
+    """
+    <!DOCTYPE HTML>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>create-elm-server</title>
+      <script src="/assets/client.js?JS_SHA"></script>
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    </head>
+    <body>
+    <div id="elm"></div>
+    <script>
+    var now = new Date()
+    var app = Elm.Client.init({
+      node: document.getElementById('elm'),
+      flags: {}
+    });
+    </script>
+    </body>
+    </html>
+    """
+`)
+
+fs.writeFileSync(src + `/Client.elm`, `module Client exposing (..)
+
+import Browser
+import Browser.Navigation
+import Fullstack.Client
+import Html exposing (Html, button, div, form, input, text)
+import Html.Attributes exposing (type_)
+import Html.Events exposing (onClick, onInput, onSubmit)
+import Http
+import Json.Decode
+import Platform exposing (Task)
+import Task
+import Types
+import Url
+
+
+fullstack =
+    Fullstack.Client.instance
+        { application =
+            { init = init
+            , view = view
+            , update = update
+            , subscriptions = subscriptions
+            , onUrlRequest = OnUrlRequest
+            , onUrlChange = OnUrlChange
+            }
+        , ports =
+            { websocketConnected = \\_ -> Sub.none
+            , websocketIn = \\_ -> Sub.none
+            }
+        , protocol =
+            { updateFromServer = updateFromServer
+            , clientMsgEncoder = Types.encodeTypesMsgFromClient
+            , serverMsgDecoder = Types.decodeTypesMsgFromServer
+            , errorDecoder = Json.Decode.string
+            }
+        }
+
+
+main =
+    fullstack.application
+
+
+{-| Clients send messages to Server with this
+-}
+sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
+sendToServer =
+    fullstack.sendToServer
+
+
+type alias Flags =
+    {}
+
+
+type alias Model =
+    { navKey : Browser.Navigation.Key
+    , greeting : String
+    , serverGreeting : String
+    }
+
+
+type Msg
+    = OnUrlRequest Browser.UrlRequest
+    | OnUrlChange Url.Url
+    | OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))
+    | SendMessage Types.MsgFromClient
+    | SetGreeting String
+
+
+init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init flags url navKey =
+    ( { navKey = navKey
+      , greeting = ""
+      , serverGreeting = ""
+      }
+    , Cmd.none
+    )
+
+
+view : Model -> Browser.Document Msg
+view model =
+    Browser.Document "Elm Fullstack Client"
+        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]
+            [ input [ onInput SetGreeting ] []
+            , button [ type_ "submit" ] [ text "Send to server" ]
+            ]
+        , if model.serverGreeting == "" then
+            text ""
+
+          else
+            div []
+                [ text "Server reply: "
+                , text model.serverGreeting
+                ]
+        ]
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        OnUrlRequest urlRequest ->
+            -- TODO
+            ( model, Cmd.none )
+
+        OnUrlChange urlUrl ->
+            -- TODO
+            ( model, Cmd.none )
+
+        OnMsgFromServer (Err err) ->
+            -- http error
+            ( { model | serverGreeting = Debug.toString err }, Cmd.none )
+
+        OnMsgFromServer (Ok (Err err)) ->
+            -- error from Server.elm
+            ( { model | serverGreeting = "app error: " ++ err }, Cmd.none )
+
+        OnMsgFromServer (Ok (Ok serverMsg)) ->
+            updateFromServer serverMsg model
+
+        SendMessage clientMsg ->
+            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )
+
+        SetGreeting s ->
+            ( { model | greeting = s }, Cmd.none )
+
+
+updateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )
+updateFromServer serverMsg model =
+    case serverMsg of
+        Types.CurrentGreeting s ->
+            ( { model | serverGreeting = s }, Cmd.none )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+`)
+
+fs.writeFileSync(src + `/Types.elm`, `module Types exposing (..)
+
+{-| All messages that Client can send to Server
+-}
+
+import Json.Decode
+import Json.Encode
+
+
+type MsgFromClient
+    = SetGreeting String
+
+
+{-| All messages that Server can reply to Client
+-}
+type MsgFromServer
+    = CurrentGreeting String
+
+
+{-| Http headers will be parsed into a RequestContext
+Failure to parse means error; keep an always successful scenario, e.g. Anonymous
+-}
+type RequestContext
+    = Cookied String
+    | Anonymous
+
+
+
+-- Encoder/Decoder
+-- consider using "npx elm-auto-encoder-decoder src/Types.elm" instead
+
+
+encodeTypesMsgFromServer : MsgFromServer -> Json.Encode.Value
+encodeTypesMsgFromServer v =
+    case v of
+        CurrentGreeting s ->
+            Json.Encode.list identity
+                [ Json.Encode.string "Types.CurrentGreeting", Json.Encode.string s ]
+
+
+decodeTypesMsgFromServer : Json.Decode.Decoder MsgFromServer
+decodeTypesMsgFromServer =
+    Json.Decode.index 0 Json.Decode.string
+        |> Json.Decode.andThen
+            (\\word ->
+                case word of
+                    "Types.CurrentGreeting" ->
+                        Json.Decode.map CurrentGreeting
+                            (Json.Decode.index 1 Json.Decode.string)
+
+                    _ ->
+                        Json.Decode.fail "Invalid MsgFromServer"
+            )
+
+
+encodeTypesMsgFromClient : MsgFromClient -> Json.Encode.Value
+encodeTypesMsgFromClient v =
+    case v of
+        SetGreeting s ->
+            Json.Encode.list identity
+                [ Json.Encode.string "Types.SetGreeting", Json.Encode.string s ]
+
+
+decodeTypesMsgFromClient : Json.Decode.Decoder MsgFromClient
+decodeTypesMsgFromClient =
+    Json.Decode.index 0 Json.Decode.string
+        |> Json.Decode.andThen
+            (\\word ->
+                case word of
+                    "Types.SetGreeting" ->
+                        Json.Decode.map SetGreeting
+                            (Json.Decode.index 1 Json.Decode.string)
+
+                    _ ->
+                        Json.Decode.fail "Invalid MsgFromClient"
+            )
+`)
+
+console.log(`
+now execute:
+
+  1. cd ${dst}
+  2. make install
+  3. make
+`)
