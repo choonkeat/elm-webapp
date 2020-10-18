@@ -3,7 +3,7 @@
     "elm-fullstack-init": "./bin/elm-fullstack-init"
   },
   "name": "elm-fullstack-init",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "cli to initialize an elm-fullstack app",
   "main": "bin/elm-fullstack-init",
   "scripts": {
