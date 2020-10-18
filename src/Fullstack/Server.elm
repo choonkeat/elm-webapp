@@ -1,6 +1,6 @@
 module Fullstack.Server exposing
     ( PlatformWorker, Ports, Protocol
-    , instance, writeResponse
+    , worker, writeResponse
     )
 
 {-|
@@ -13,7 +13,7 @@ module Fullstack.Server exposing
 
 # Common Helpers
 
-@docs instance, writeResponse
+@docs worker, writeResponse
 
 -}
 
@@ -132,7 +132,7 @@ type alias Protocol msg x serverMsg clientMsg route header model =
 
 {-| Returns a Fullstack.Server program, capable of communicating with Fullstack.Client program
 -}
-instance :
+worker :
     -- Platform.worker
     -- https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
     { worker : PlatformWorker flags model msg
@@ -142,12 +142,12 @@ instance :
     , protocol : Protocol msg x serverMsg clientMsg endpoint header model
     }
     -> Program flags (FrameworkModel model) (FrameworkMsg msg x serverMsg)
-instance { worker, ports, protocol } =
+worker ({ ports, protocol } as cfg) =
     Platform.worker
-        { init = init worker.init
-        , update = update worker.update ports protocol
+        { init = init cfg.worker.init
+        , update = update cfg.worker.update ports protocol
         , subscriptions =
-            subscriptions worker.subscriptions ports.onHttpRequest
+            subscriptions cfg.worker.subscriptions ports.onHttpRequest
         }
 
 

@@ -1,17 +1,24 @@
-module Fullstack.Client exposing (instance)
+module Fullstack.Client exposing
+    ( Ports, Protocol
+    , element, document, application
+    )
 
 {-|
 
 
+# Definition
+
+@docs Ports, Protocol
+
+
 # Common Helpers
 
-@docs instance
+@docs element, document, application
 
 -}
 
 import Browser
 import Browser.Navigation
-import Fullstack.Server
 import Fullstack.Shared
 import Html
 import Http
@@ -27,12 +34,22 @@ type FrameworkMsg a
     | WebSocketReceive String
 
 
+{-| Hook up ports to use websockets for passing serverMsg and clientMsg
+-}
 type alias Ports msg =
     { websocketConnected : (Int -> FrameworkMsg msg) -> Sub (FrameworkMsg msg)
     , websocketIn : (String -> FrameworkMsg msg) -> Sub (FrameworkMsg msg)
     }
 
 
+{-| A set of required protocols.
+
+    - `updateFromServer` is called when `serverMsg` is received via websocket
+    - `clientMsgEncoder` encodes outgoing `clientMsg`, e.g. via `sendToServer`
+    - `serverMsgDecoder` decodes replies from Server
+    - `errorDecoder` decodes error replies from Server
+
+-}
 type alias Protocol serverMsg clientMsg model msg x =
     { updateFromServer : serverMsg -> model -> ( model, Cmd msg )
     , clientMsgEncoder : clientMsg -> Json.Encode.Value
@@ -41,10 +58,102 @@ type alias Protocol serverMsg clientMsg model msg x =
     }
 
 
+{-| Returns a `Browser.element` to use as `main` in your client app
+and a `sendToServer` function to send `clientMsg` with
+-}
+element :
+    { -- Browser.element
+      -- https://package.elm-lang.org/packages/elm/browser/latest/Browser#element
+      element :
+        { init : flags -> ( model, Cmd msg )
+        , view : model -> Html.Html msg
+        , update : msg -> model -> ( model, Cmd msg )
+        , subscriptions : model -> Sub msg
+        }
+
+    -- Fullstack Extension
+    , ports : Ports msg
+    , protocol : Protocol serverMsg clientMsg model msg x
+    }
+    ->
+        { element : Program flags model (FrameworkMsg msg)
+        , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
+        }
+element ({ ports, protocol } as cfg) =
+    let
+        sendToServer m =
+            Http.task
+                { method = "POST"
+                , headers = []
+                , url = Fullstack.Shared.httpEndpoint
+                , body = Http.jsonBody (protocol.clientMsgEncoder m)
+                , resolver = Http.stringResolver (serverMsgFromResponse (Fullstack.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
+                , timeout = Just 60000
+                }
+
+        newElement =
+            Browser.element
+                { init = initDocument cfg.element.init
+                , view = viewHtml cfg.element.view
+                , update = update cfg.element.update protocol.updateFromServer protocol.serverMsgDecoder
+                , subscriptions = subscriptions cfg.element.subscriptions ports
+                }
+    in
+    { element = newElement
+    , sendToServer = sendToServer
+    }
+
+
+{-| Returns a `Browser.document` to use as `main` in your client app
+and a `sendToServer` function to send `clientMsg` with
+-}
+document :
+    { -- Browser.document
+      -- https://package.elm-lang.org/packages/elm/browser/latest/Browser#document
+      document :
+        { init : flags -> ( model, Cmd msg )
+        , view : model -> Browser.Document msg
+        , update : msg -> model -> ( model, Cmd msg )
+        , subscriptions : model -> Sub msg
+        }
+
+    -- Fullstack Extension
+    , ports : Ports msg
+    , protocol : Protocol serverMsg clientMsg model msg x
+    }
+    ->
+        { document : Program flags model (FrameworkMsg msg)
+        , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
+        }
+document ({ ports, protocol } as cfg) =
+    let
+        sendToServer m =
+            Http.task
+                { method = "POST"
+                , headers = []
+                , url = Fullstack.Shared.httpEndpoint
+                , body = Http.jsonBody (protocol.clientMsgEncoder m)
+                , resolver = Http.stringResolver (serverMsgFromResponse (Fullstack.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
+                , timeout = Just 60000
+                }
+
+        newApplication =
+            Browser.document
+                { init = initDocument cfg.document.init
+                , view = viewDocument cfg.document.view
+                , update = update cfg.document.update protocol.updateFromServer protocol.serverMsgDecoder
+                , subscriptions = subscriptions cfg.document.subscriptions ports
+                }
+    in
+    { document = newApplication
+    , sendToServer = sendToServer
+    }
+
+
 {-| Returns a `Browser.application` to use as `main` in your client app
 and a `sendToServer` function to send `clientMsg` with
 -}
-instance :
+application :
     -- Browser.application
     -- https://package.elm-lang.org/packages/elm/browser/latest/Browser#application
     { application :
@@ -64,7 +173,7 @@ instance :
         { application : Program flags model (FrameworkMsg msg)
         , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
         }
-instance { application, ports, protocol } =
+application ({ ports, protocol } as cfg) =
     let
         sendToServer m =
             Http.task
@@ -78,12 +187,12 @@ instance { application, ports, protocol } =
 
         newApplication =
             Browser.application
-                { init = init application.init
-                , view = view application.view
-                , update = update application.update protocol.updateFromServer protocol.serverMsgDecoder
-                , subscriptions = subscriptions application.subscriptions ports
-                , onUrlRequest = application.onUrlRequest >> AppMsg
-                , onUrlChange = application.onUrlChange >> AppMsg
+                { init = initApplication cfg.application.init
+                , view = viewDocument cfg.application.view
+                , update = update cfg.application.update protocol.updateFromServer protocol.serverMsgDecoder
+                , subscriptions = subscriptions cfg.application.subscriptions ports
+                , onUrlRequest = cfg.application.onUrlRequest >> AppMsg
+                , onUrlChange = cfg.application.onUrlChange >> AppMsg
                 }
     in
     { application = newApplication
@@ -112,8 +221,17 @@ serverMsgFromResponse serverMsgDecoder resp =
             Err Http.NetworkError
 
 
-init : (flags -> Url.Url -> Browser.Navigation.Key -> ( model, Cmd msg )) -> flags -> Url.Url -> Browser.Navigation.Key -> ( model, Cmd (FrameworkMsg msg) )
-init appInit flags urlUrl navKey =
+initDocument : (flags -> ( model, Cmd msg )) -> flags -> ( model, Cmd (FrameworkMsg msg) )
+initDocument appInit flags =
+    let
+        ( model, appCmd ) =
+            appInit flags
+    in
+    ( model, Cmd.map AppMsg appCmd )
+
+
+initApplication : (flags -> Url.Url -> Browser.Navigation.Key -> ( model, Cmd msg )) -> flags -> Url.Url -> Browser.Navigation.Key -> ( model, Cmd (FrameworkMsg msg) )
+initApplication appInit flags urlUrl navKey =
     let
         ( model, appCmd ) =
             appInit flags urlUrl navKey
@@ -121,8 +239,13 @@ init appInit flags urlUrl navKey =
     ( model, Cmd.map AppMsg appCmd )
 
 
-view : (model -> Browser.Document msg) -> model -> Browser.Document (FrameworkMsg msg)
-view appView model =
+viewHtml : (model -> Html.Html msg) -> model -> Html.Html (FrameworkMsg msg)
+viewHtml appView model =
+    Html.map AppMsg (appView model)
+
+
+viewDocument : (model -> Browser.Document msg) -> model -> Browser.Document (FrameworkMsg msg)
+viewDocument appView model =
     let
         { title, body } =
             appView model
