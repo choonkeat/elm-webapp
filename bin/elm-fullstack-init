@@ -44,7 +44,7 @@ elm.json:
 	elm init
 
 package.json:
-	npm init -y && npm install --save xhr2 full-url node-static
+	npm init -y && npm install --save xhr2 full-url node-static websocket
 `)
 
 fs.writeFileSync(dst + `/index.js`, `global.XMLHttpRequest = require('xhr2')
@@ -54,6 +54,7 @@ const http = require('http')
 const fullUrl = require('full-url')
 const nodeStatic = require('node-static')
 const fileServer = new nodeStatic.Server('./public')
+const WebSocketServer = require('websocket').server
 
 function httpServer (app) {
   if (!app.ports) return console.log('no ports!')
@@ -83,12 +84,68 @@ function httpServer (app) {
       })
     }).resume()
   })
-
   app.ports.onHttpResponse.subscribe(({ statusCode, body, headers, request }) => {
     console.log('[http] onHttpResponse status=', statusCode, Buffer.byteLength(body), 'bytes')
     request.response.writeHead(statusCode, { ...headers, 'Content-Length': Buffer.byteLength(body) })
     request.response.end(body)
   })
+
+  var wsServer = new WebSocketServer({
+    // WebSocket server is tied to a HTTP server. WebSocket request is just
+    // an enhanced HTTP request. For more info http://tools.ietf.org/html/rfc6455#page-6
+    httpServer: server
+  })
+
+  if (app.ports.writeWs) {
+    app.ports.writeWs.subscribe(({ key, connection, body }) => {
+      console.log('[ws] writeWs key=', key, body)
+      connection.sendUTF(body)
+    })
+  }
+
+  if (app.ports.onWebsocketEvent) {
+    // Start websocket server, accept requests and pass to Elm
+    wsServer.on('request', function (request) {
+      console.log('[ws] Connection from origin ' + request.origin + '.', request.key)
+
+      // accept connection - you should check 'request.origin' to make sure that
+      // client is connecting from your website
+      // (http://en.wikipedia.org/wiki/Same_origin_policy)
+      if (request.origin !== 'http://localhost:8000' && false) {
+        request.reject()
+        console.log((new Date()) + ' Connection from origin ' + request.origin + ' rejected.')
+        return
+      }
+
+      var connection = request.accept(null, request.origin)
+      app.ports.onWebsocketEvent.send({
+        open: connection,
+        key: request.key,
+        headers: (request.httpRequest || {}).headers
+      })
+
+      // user sent some message
+      connection.on('message', function (payload) {
+        console.log('[ws] payload', payload)
+        app.ports.onWebsocketEvent.send({
+          message: connection,
+          key: request.key,
+          payload: payload
+        })
+      })
+      // user disconnected
+      // https://github.com/theturtle32/WebSocket-Node/blob/1f7ffba2f7a6f9473bcb39228264380ce2772ba7/docs/WebSocketConnection.md#close
+      connection.on('close', function (reasonCode, description) {
+        console.log('[ws] close', reasonCode, description)
+        app.ports.onWebsocketEvent.send({
+          reasonCode,
+          description,
+          close: connection,
+          key: request.key
+        })
+      })
+    })
+  }
 
   var port = process.env.PORT || 8000
   server.listen(port)
@@ -100,6 +157,11 @@ function httpServer (app) {
       console.log('[http] server closed.')
       process.exit(0) // not great, but there are Timers dangling and won't quit
     })
+
+    if (app.ports.onWebsocketEvent) {
+      wsServer.shutDown()
+      console.log('[ws] server shutdown.')
+    }
   }
 
   process.on('SIGTERM', shutdown)
@@ -126,6 +188,17 @@ import Types exposing (MsgFromServer)
 import Url
 
 
+
+-- port onWebsocketEvent : (Json.Encode.Value -> msg) -> Sub msg
+--
+--
+-- port writeWs : Json.Encode.Value -> Cmd msg
+--
+--
+-- writeWebsocketMessage =
+--     Fullstack.Server.writeWebsocketMessage writeWs
+
+
 port onHttpRequest : (Json.Encode.Value -> msg) -> Sub msg
 
 
@@ -146,6 +219,8 @@ main =
         , ports =
             { writeResponse = writeResponse
             , onHttpRequest = onHttpRequest
+            , onWebsocketEvent = \\_ -> Sub.none -- onWebsocketEvent
+            , writeWebsocketMessage = \\_ _ _ -> Cmd.none -- writeWebsocketMessage
             }
         , protocol =
             { routeDecoder = routeDecoder
@@ -271,6 +346,46 @@ spaHtml =
       node: document.getElementById('elm'),
       flags: {}
     });
+
+    if (window.WebSocket && app.ports && app.ports.websocketOut) {
+      console.log('[js websocket]', window.WebSocket)
+      ;(function (app, WebSocket) {
+        var ws = {}
+        app.ports.websocketOut.subscribe(function (msg) {
+          try {
+            console.log('[js websocket] send', msg)
+            ws.conn.send(msg)
+          } catch (e) {
+            console.log('[js websocket] send fail', e) // e.g. ws.conn not established
+          }
+        })
+        function connectWebSocket (app, wsUrl, optionalProtocol) {
+          ws.conn = new WebSocket(wsUrl, optionalProtocol)
+          ws.conn.onopen = function (event) {
+            console.log('[js websocket] connected', event)
+            app.ports.websocketConnected.send(event.timeStamp | 0)
+          }
+          ws.conn.onmessage = function (event) {
+            console.log('[js websocket] message', event)
+            app.ports.websocketIn.send(event.data)
+          }
+          ws.conn.onerror = function (event) {
+            console.log('[js websocket] error', event)
+          }
+          ws.conn.onclose = function (event) {
+            console.log('[js websocket] close', event)
+            ws.conn.onclose = null
+            ws.conn = null
+            setTimeout(function () {
+              console.log('[js websocket] retrying...')
+              connectWebSocket(app, wsUrl, optionalProtocol)
+            }, 1000)
+          }
+        }
+        connectWebSocket(app, (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + window.location.host)
+      })(app, window.WebSocket)
+    }
+
     </script>
     </body>
     </html>
@@ -289,6 +404,6 @@ now execute:
 `)
 
 function clientContent(key) {
-  const dict = {"src/Types.elm":"module Types exposing (..)\n\n{-| All messages that Client can send to Server\n-}\n\nimport Json.Decode\nimport Json.Encode\n\n\ntype MsgFromClient\n    = SetGreeting String\n\n\n{-| All messages that Server can reply to Client\n-}\ntype MsgFromServer\n    = CurrentGreeting String\n\n\n{-| Http headers will be parsed into a RequestContext\nFailure to parse means error; keep an always successful scenario, e.g. Anonymous\n-}\ntype RequestContext\n    = Cookied String\n    | Anonymous\n\n\n\n-- Encoder/Decoder\n-- consider using \"npx elm-auto-encoder-decoder src/Types.elm\" instead\n\n\nencodeTypesMsgFromServer : MsgFromServer -> Json.Encode.Value\nencodeTypesMsgFromServer v =\n    case v of\n        CurrentGreeting s ->\n            Json.Encode.list identity\n                [ Json.Encode.string \"Types.CurrentGreeting\", Json.Encode.string s ]\n\n\ndecodeTypesMsgFromServer : Json.Decode.Decoder MsgFromServer\ndecodeTypesMsgFromServer =\n    Json.Decode.index 0 Json.Decode.string\n        |> Json.Decode.andThen\n            (\\word ->\n                case word of\n                    \"Types.CurrentGreeting\" ->\n                        Json.Decode.map CurrentGreeting\n                            (Json.Decode.index 1 Json.Decode.string)\n\n                    _ ->\n                        Json.Decode.fail \"Invalid MsgFromServer\"\n            )\n\n\nencodeTypesMsgFromClient : MsgFromClient -> Json.Encode.Value\nencodeTypesMsgFromClient v =\n    case v of\n        SetGreeting s ->\n            Json.Encode.list identity\n                [ Json.Encode.string \"Types.SetGreeting\", Json.Encode.string s ]\n\n\ndecodeTypesMsgFromClient : Json.Decode.Decoder MsgFromClient\ndecodeTypesMsgFromClient =\n    Json.Decode.index 0 Json.Decode.string\n        |> Json.Decode.andThen\n            (\\word ->\n                case word of\n                    \"Types.SetGreeting\" ->\n                        Json.Decode.map SetGreeting\n                            (Json.Decode.index 1 Json.Decode.string)\n\n                    _ ->\n                        Json.Decode.fail \"Invalid MsgFromClient\"\n            )\n","application":"module Application exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\nfullstack =\n    Fullstack.Client.application\n        { application =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            , onUrlRequest = OnUrlRequest\n            , onUrlChange = OnUrlChange\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none\n            , websocketIn = \\_ -> Sub.none\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.application\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { navKey : Browser.Navigation.Key\n    , greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnUrlRequest Browser.UrlRequest\n    | OnUrlChange Url.Url\n    | OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )\ninit flags url navKey =\n    ( { navKey = navKey\n      , greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Browser.Document Msg\nview model =\n    Browser.Document \"Elm Fullstack Client\"\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnUrlRequest urlRequest ->\n            -- TODO\n            ( model, Cmd.none )\n\n        OnUrlChange urlUrl ->\n            -- TODO\n            ( model, Cmd.none )\n\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n","document":"module Document exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\nfullstack =\n    Fullstack.Client.document\n        { document =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none\n            , websocketIn = \\_ -> Sub.none\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.document\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> ( Model, Cmd Msg )\ninit flags =\n    ( { greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Browser.Document Msg\nview model =\n    Browser.Document \"Elm Fullstack Client\"\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n","element":"module Element exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\nfullstack =\n    Fullstack.Client.element\n        { element =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none\n            , websocketIn = \\_ -> Sub.none\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.element\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> ( Model, Cmd Msg )\ninit flags =\n    ( { greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Html.Html Msg\nview model =\n    div []\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n"}
+  const dict = {"src/Types.elm":"module Types exposing (..)\n\n{-| All messages that Client can send to Server\n-}\n\nimport Json.Decode\nimport Json.Encode\n\n\ntype MsgFromClient\n    = SetGreeting String\n\n\n{-| All messages that Server can reply to Client\n-}\ntype MsgFromServer\n    = CurrentGreeting String\n\n\n{-| Http headers will be parsed into a RequestContext\nFailure to parse means error; keep an always successful scenario, e.g. Anonymous\n-}\ntype RequestContext\n    = Cookied String\n    | Anonymous\n\n\n\n-- Encoder/Decoder\n-- consider using \"npx elm-auto-encoder-decoder src/Types.elm\" instead\n\n\nencodeTypesMsgFromServer : MsgFromServer -> Json.Encode.Value\nencodeTypesMsgFromServer v =\n    case v of\n        CurrentGreeting s ->\n            Json.Encode.list identity\n                [ Json.Encode.string \"Types.CurrentGreeting\", Json.Encode.string s ]\n\n\ndecodeTypesMsgFromServer : Json.Decode.Decoder MsgFromServer\ndecodeTypesMsgFromServer =\n    Json.Decode.index 0 Json.Decode.string\n        |> Json.Decode.andThen\n            (\\word ->\n                case word of\n                    \"Types.CurrentGreeting\" ->\n                        Json.Decode.map CurrentGreeting\n                            (Json.Decode.index 1 Json.Decode.string)\n\n                    _ ->\n                        Json.Decode.fail \"Invalid MsgFromServer\"\n            )\n\n\nencodeTypesMsgFromClient : MsgFromClient -> Json.Encode.Value\nencodeTypesMsgFromClient v =\n    case v of\n        SetGreeting s ->\n            Json.Encode.list identity\n                [ Json.Encode.string \"Types.SetGreeting\", Json.Encode.string s ]\n\n\ndecodeTypesMsgFromClient : Json.Decode.Decoder MsgFromClient\ndecodeTypesMsgFromClient =\n    Json.Decode.index 0 Json.Decode.string\n        |> Json.Decode.andThen\n            (\\word ->\n                case word of\n                    \"Types.SetGreeting\" ->\n                        Json.Decode.map SetGreeting\n                            (Json.Decode.index 1 Json.Decode.string)\n\n                    _ ->\n                        Json.Decode.fail \"Invalid MsgFromClient\"\n            )\n","application":"module Application exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Json.Encode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\n\n-- port websocketConnected : (Int -> msg) -> Sub msg\n--\n--\n-- port websocketIn : (String -> msg) -> Sub msg\n--\n--\n-- port websocketOut : String -> Cmd msg\n\n\nfullstack =\n    Fullstack.Client.application\n        { application =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            , onUrlRequest = OnUrlRequest\n            , onUrlChange = OnUrlChange\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none -- websocketConnected\n            , websocketIn = \\_ -> Sub.none -- websocketIn\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.application\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { navKey : Browser.Navigation.Key\n    , greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnUrlRequest Browser.UrlRequest\n    | OnUrlChange Url.Url\n    | OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )\ninit flags url navKey =\n    ( { navKey = navKey\n      , greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Browser.Document Msg\nview model =\n    Browser.Document \"Elm Fullstack Client\"\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnUrlRequest urlRequest ->\n            -- TODO\n            ( model, Cmd.none )\n\n        OnUrlChange urlUrl ->\n            -- TODO\n            ( model, Cmd.none )\n\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n","document":"module Document exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Json.Encode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\n\n-- port websocketConnected : (Int -> msg) -> Sub msg\n--\n--\n-- port websocketIn : (String -> msg) -> Sub msg\n--\n--\n-- port websocketOut : String -> Cmd msg\n\n\nfullstack =\n    Fullstack.Client.document\n        { document =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none -- websocketConnected\n            , websocketIn = \\_ -> Sub.none -- websocketIn\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.document\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> ( Model, Cmd Msg )\ninit flags =\n    ( { greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Browser.Document Msg\nview model =\n    Browser.Document \"Elm Fullstack Client\"\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n","element":"module Element exposing (..)\n\nimport Browser\nimport Browser.Navigation\nimport Fullstack.Client\nimport Html exposing (Html, button, div, form, input, text)\nimport Html.Attributes exposing (type_)\nimport Html.Events exposing (onClick, onInput, onSubmit)\nimport Http\nimport Json.Decode\nimport Json.Encode\nimport Platform exposing (Task)\nimport Task\nimport Types\nimport Url\n\n\n\n-- port websocketConnected : (Int -> msg) -> Sub msg\n--\n--\n-- port websocketIn : (String -> msg) -> Sub msg\n--\n--\n-- port websocketOut : String -> Cmd msg\n\n\nfullstack =\n    Fullstack.Client.element\n        { element =\n            { init = init\n            , view = view\n            , update = update\n            , subscriptions = subscriptions\n            }\n        , ports =\n            { websocketConnected = \\_ -> Sub.none -- websocketConnected\n            , websocketIn = \\_ -> Sub.none -- websocketIn\n            }\n        , protocol =\n            { updateFromServer = updateFromServer\n            , clientMsgEncoder = Types.encodeTypesMsgFromClient\n            , serverMsgDecoder = Types.decodeTypesMsgFromServer\n            , errorDecoder = Json.Decode.string\n            }\n        }\n\n\nmain =\n    fullstack.element\n\n\n{-| Clients send messages to Server with this\n-}\nsendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)\nsendToServer =\n    fullstack.sendToServer\n\n\ntype alias Flags =\n    {}\n\n\ntype alias Model =\n    { greeting : String\n    , serverGreeting : String\n    }\n\n\ntype Msg\n    = OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))\n    | SendMessage Types.MsgFromClient\n    | SetGreeting String\n\n\ninit : Flags -> ( Model, Cmd Msg )\ninit flags =\n    ( { greeting = \"\"\n      , serverGreeting = \"\"\n      }\n    , Cmd.none\n    )\n\n\nview : Model -> Html.Html Msg\nview model =\n    div []\n        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]\n            [ input [ onInput SetGreeting ] []\n            , button [ type_ \"submit\" ] [ text \"Send to server\" ]\n            ]\n        , if model.serverGreeting == \"\" then\n            text \"\"\n\n          else\n            div []\n                [ text \"Server reply: \"\n                , text model.serverGreeting\n                ]\n        ]\n\n\nupdate : Msg -> Model -> ( Model, Cmd Msg )\nupdate msg model =\n    case msg of\n        OnMsgFromServer (Err err) ->\n            -- http error\n            ( { model | serverGreeting = Debug.toString err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Err err)) ->\n            -- error from Server.elm\n            ( { model | serverGreeting = \"app error: \" ++ err }, Cmd.none )\n\n        OnMsgFromServer (Ok (Ok serverMsg)) ->\n            updateFromServer serverMsg model\n\n        SendMessage clientMsg ->\n            -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )\n            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )\n\n        SetGreeting s ->\n            ( { model | greeting = s }, Cmd.none )\n\n\nupdateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )\nupdateFromServer serverMsg model =\n    case serverMsg of\n        Types.CurrentGreeting s ->\n            ( { model | serverGreeting = s }, Cmd.none )\n\n\nsubscriptions : Model -> Sub Msg\nsubscriptions model =\n    Sub.none\n"}
   return dict[key]
 }

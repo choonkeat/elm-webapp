@@ -25,6 +25,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
+import Time
 import Url
 
 
@@ -95,7 +96,7 @@ element ({ ports, protocol } as cfg) =
             Browser.element
                 { init = initDocument cfg.element.init
                 , view = viewHtml cfg.element.view
-                , update = update cfg.element.update protocol.updateFromServer protocol.serverMsgDecoder
+                , update = update cfg.element.update protocol.updateFromServer protocol.errorDecoder protocol.serverMsgDecoder
                 , subscriptions = subscriptions cfg.element.subscriptions ports
                 }
     in
@@ -141,7 +142,7 @@ document ({ ports, protocol } as cfg) =
             Browser.document
                 { init = initDocument cfg.document.init
                 , view = viewDocument cfg.document.view
-                , update = update cfg.document.update protocol.updateFromServer protocol.serverMsgDecoder
+                , update = update cfg.document.update protocol.updateFromServer protocol.errorDecoder protocol.serverMsgDecoder
                 , subscriptions = subscriptions cfg.document.subscriptions ports
                 }
     in
@@ -189,7 +190,7 @@ application ({ ports, protocol } as cfg) =
             Browser.application
                 { init = initApplication cfg.application.init
                 , view = viewDocument cfg.application.view
-                , update = update cfg.application.update protocol.updateFromServer protocol.serverMsgDecoder
+                , update = update cfg.application.update protocol.updateFromServer protocol.errorDecoder protocol.serverMsgDecoder
                 , subscriptions = subscriptions cfg.application.subscriptions ports
                 , onUrlRequest = cfg.application.onUrlRequest >> AppMsg
                 , onUrlChange = cfg.application.onUrlChange >> AppMsg
@@ -256,24 +257,34 @@ viewDocument appView model =
 update :
     (msg -> model -> ( model, Cmd msg ))
     -> (serverMsg -> model -> ( model, Cmd msg ))
+    -> Json.Decode.Decoder x
     -> Json.Decode.Decoder serverMsg
     -> FrameworkMsg msg
     -> model
     -> ( model, Cmd (FrameworkMsg msg) )
-update appUpdate updateFromServer serverMsgDecoder msg model =
+update appUpdate updateFromServer errorDecoder serverMsgDecoder msg model =
     Tuple.mapSecond (Cmd.map AppMsg) <|
         -- all msg `Cmd msg` gets transformed to `Cmd (FrameworkMsg msg)`
-        case msg of
+        case Debug.log "framework update" msg of
             AppMsg m ->
                 appUpdate m model
 
-            WebSocketConnected t ->
+            WebSocketConnected nowMilliseconds ->
                 ( model, Cmd.none )
 
-            WebSocketReceive str ->
-                Json.Decode.decodeString serverMsgDecoder str
-                    |> Result.map (\m -> updateFromServer m model)
-                    |> Result.withDefault ( model, Cmd.none )
+            WebSocketReceive messageString ->
+                let
+                    decoder =
+                        Fullstack.Shared.decodeResultResult errorDecoder serverMsgDecoder
+                in
+                case Json.Decode.decodeString decoder messageString of
+                    Err jsonErr ->
+                        -- json error from websocket swallowed :-(
+                        ( model, Cmd.none )
+
+                    Ok result ->
+                        Result.map (\m -> updateFromServer m model) result
+                            |> Result.withDefault ( model, Cmd.none )
 
 
 subscriptions :

@@ -8,10 +8,21 @@ import Html.Attributes exposing (type_)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode
+import Json.Encode
 import Platform exposing (Task)
 import Task
 import Types
 import Url
+
+
+
+-- port websocketConnected : (Int -> msg) -> Sub msg
+--
+--
+-- port websocketIn : (String -> msg) -> Sub msg
+--
+--
+-- port websocketOut : String -> Cmd msg
 
 
 fullstack =
@@ -23,8 +34,8 @@ fullstack =
             , subscriptions = subscriptions
             }
         , ports =
-            { websocketConnected = \_ -> Sub.none
-            , websocketIn = \_ -> Sub.none
+            { websocketConnected = \_ -> Sub.none -- websocketConnected
+            , websocketIn = \_ -> Sub.none -- websocketIn
             }
         , protocol =
             { updateFromServer = updateFromServer
@@ -104,6 +115,7 @@ update msg model =
             updateFromServer serverMsg model
 
         SendMessage clientMsg ->
+            -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )
             ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )
 
         SetGreeting s ->
