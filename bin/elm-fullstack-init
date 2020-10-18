@@ -2,9 +2,9 @@
 
 const path = require('path')
 var clients = {
-  'application': '../../src/Application.elm',
-  'document': '../../src/Document.elm',
-  'element': '../../src/Element.elm'
+  'application': '../src/Application.elm',
+  'document': '../src/Document.elm',
+  'element': '../src/Element.elm'
 }
 var binName = process.argv[1]
 var clientType = process.argv[2]
@@ -279,7 +279,7 @@ spaHtml =
 
 fs.writeFileSync(src + `/Client.elm`, fs.readFileSync(path.resolve(binName, client), { encoding: 'utf8' }).replace(/^module \w+/, 'module Client'))
 
-fs.writeFileSync(src + `/Types.elm`, fs.readFileSync(path.resolve(binName, '../../src/Types.elm')))
+fs.writeFileSync(src + `/Types.elm`, fs.readFileSync(path.resolve(binName, '../src/Types.elm')))
 
 console.log(`
 now execute:
