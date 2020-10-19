@@ -61,7 +61,7 @@ function httpServer (app) {
 
   // Start http server, accept requests and pass to Elm
   const server = http.createServer((req, res) => {
-    let body = [] // https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/#request-body
+    const body = [] // https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/#request-body
     req.on('data', (chunk) => {
       body.push(chunk)
     }).on('end', () => {
@@ -70,9 +70,9 @@ function httpServer (app) {
         if (!e || e.status !== 404) return
 
         // otherwise, Fullstack.Server will handle the request
-        let contentType = req.headers['content-type'] || ''
-        let encoding = (contentType.match(/; charset=(\\S+)/) || ['', 'utf8'])[1] // charset or default to "utf8"
-        let bodyString = Buffer.concat(body).toString(encoding)
+        const contentType = req.headers['content-type'] || ''
+        const encoding = (contentType.match(/; charset=(\\S+)/) || ['', 'utf8'])[1] // charset or default to "utf8"
+        const bodyString = Buffer.concat(body).toString(encoding)
         app.ports.onHttpRequest.send({
           response: res, // this value will be used by "onHttpResponse" below
           method: req.method,
@@ -90,12 +90,6 @@ function httpServer (app) {
     request.response.end(body)
   })
 
-  var wsServer = new WebSocketServer({
-    // WebSocket server is tied to a HTTP server. WebSocket request is just
-    // an enhanced HTTP request. For more info http://tools.ietf.org/html/rfc6455#page-6
-    httpServer: server
-  })
-
   if (app.ports.writeWs) {
     app.ports.writeWs.subscribe(({ key, connection, body }) => {
       console.log('[ws] writeWs key=', key, body)
@@ -103,7 +97,14 @@ function httpServer (app) {
     })
   }
 
+  var wsServer
   if (app.ports.onWebsocketEvent) {
+    wsServer = new WebSocketServer({
+      // WebSocket server is tied to a HTTP server. WebSocket request is just
+      // an enhanced HTTP request. For more info http://tools.ietf.org/html/rfc6455#page-6
+      httpServer: server
+    })
+
     // Start websocket server, accept requests and pass to Elm
     wsServer.on('request', function (request) {
       console.log('[ws] Connection from origin ' + request.origin + '.', request.key)
@@ -153,11 +154,14 @@ function httpServer (app) {
 
   const shutdown = () => {
     console.info('[http] signal received.')
+    if (app.ports.onWebsocketEvent) {
+      wsServer.unmount()
+      console.log('[ws] server unmounted.')
+    }
     server.close(() => {
       console.log('[http] server closed.')
       process.exit(0) // not great, but there are Timers dangling and won't quit
     })
-
     if (app.ports.onWebsocketEvent) {
       wsServer.shutDown()
       console.log('[ws] server shutdown.')
