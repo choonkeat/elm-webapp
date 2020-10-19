@@ -1,12 +1,11 @@
 module Types exposing (..)
 
-{-| All messages that Client can send to Server
--}
-
 import Json.Decode
 import Json.Encode
 
 
+{-| All messages that Client can send to Server
+-}
 type MsgFromClient
     = SetGreeting String
 
