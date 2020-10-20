@@ -25,10 +25,10 @@ fs.writeFileSync(dst + `/Makefile`, `run: compile
 
 compile: elm.json package.json build/Server.js public/assets/client.js
 
-build/Server.js: src/Server.elm
+build/Server.js: src/Server.elm src/Types.elm
 	elm make src/Server.elm --output build/Server.js
 
-public/assets/client.js: src/Client.elm
+public/assets/client.js: src/Client.elm src/Types.elm
 	elm make src/Client.elm --output public/assets/client.js
 
 #
