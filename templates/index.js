@@ -130,11 +130,15 @@ function httpServer (app) {
   process.on('SIGINT', shutdown)
 
   if (process.argv.indexOf('--watch') > -1) {
-    console.log('[watch] file changes in ./src')
-    fs.watch('./src', { recursive: true }, function (eventType, filename) {
-      console.log('[watch]', eventType, filename)
-      setTimeout(shutdown, 100)
-    })
+    try {
+      fs.watch('./src', { recursive: true }, function (eventType, filename) {
+        console.log('[watch]', eventType, filename)
+        setTimeout(shutdown, 100)
+      })
+      console.log('[watch] file changes in ./src')
+    } catch (e) {
+      // console.log('[watch] unsupported')
+    }
   }
 }
 
