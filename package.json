@@ -1,8 +1,9 @@
 {
   "bin": {
+    "elm-fullstack": "./bin/elm-fullstack-init",
     "elm-fullstack-init": "./bin/elm-fullstack-init"
   },
-  "name": "elm-fullstack-init",
+  "name": "elm-fullstack",
   "version": "3.0.3",
   "description": "cli to initialize an elm-fullstack app",
   "main": "bin/elm-fullstack-init",
@@ -26,5 +27,6 @@
   "bugs": {
     "url": "https://github.com/choonkeat/elm-fullstack/issues"
   },
-  "homepage": "https://github.com/choonkeat/elm-fullstack#readme"
+  "homepage": "https://github.com/choonkeat/elm-fullstack#readme",
+  "dependencies": {}
 }

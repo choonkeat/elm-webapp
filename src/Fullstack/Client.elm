@@ -265,7 +265,7 @@ update :
 update appUpdate updateFromServer errorDecoder serverMsgDecoder msg model =
     Tuple.mapSecond (Cmd.map AppMsg) <|
         -- all msg `Cmd msg` gets transformed to `Cmd (FrameworkMsg msg)`
-        case Debug.log "framework update" msg of
+        case msg of
             AppMsg m ->
                 appUpdate m model
 
