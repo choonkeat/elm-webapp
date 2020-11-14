@@ -5,7 +5,7 @@ A setup for writing http based, client-server app in elm, inspired wholly by [La
 ## Getting started
 
 ```
-npx elm-fullstack-init element hello-app
+npx elm-fullstack element hello-app
 ```
 
 This will create a skeleton file directory structure
@@ -23,16 +23,11 @@ hello-app
 ```
 
 - `src/Client.elm` is where our [Browser.element](https://package.elm-lang.org/packages/elm/browser/latest/Browser#element) resides. The only exception is, this app includes a built-in `sendToServer` [Task](https://package.elm-lang.org/packages/elm/core/latest/Task)
-    - to generate [Browser.application](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) or [Browser.document](https://package.elm-lang.org/packages/elm/browser/latest/Browser#document) instead, use either
+    - to generate [Browser.document](https://package.elm-lang.org/packages/elm/browser/latest/Browser#document) or [Browser.application](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) instead, use either commands
 
     ```
-    npx elm-fullstack-init application hello-app
-    ```
-
-    or
-
-    ```
-    npx elm-fullstack-init document hello-app
+    npx elm-fullstack document hello-app
+    npx elm-fullstack application hello-app
     ```
 
 - `src/Server.elm` is where our elm [Platform.worker](https://package.elm-lang.org/packages/elm/core/latest/Platform#worker) resides. It serves your SPA by default, and can respond to `sendToServer`
