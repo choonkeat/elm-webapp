@@ -12,6 +12,7 @@ import Json.Encode
 import Platform exposing (Task)
 import Task
 import Types
+import Types.Auto
 import Url
 
 
@@ -41,8 +42,8 @@ fullstack =
             }
         , protocol =
             { updateFromServer = updateFromServer
-            , clientMsgEncoder = Types.encodeTypesMsgFromClient
-            , serverMsgDecoder = Types.decodeTypesMsgFromServer
+            , clientMsgEncoder = Types.Auto.encodeTypesMsgFromClient
+            , serverMsgDecoder = Types.Auto.decodeTypesMsgFromServer
             , errorDecoder = Json.Decode.string
             }
         }

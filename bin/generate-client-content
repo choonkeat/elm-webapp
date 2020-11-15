@@ -5,6 +5,7 @@ const dict = {
   'index.js': fs.readFileSync('templates/index.js', { encoding: 'utf8' }),
   'Makefile': fs.readFileSync('templates/Makefile', { encoding: 'utf8' }),
   'src/Types.elm': fs.readFileSync('src/Types.elm', { encoding: 'utf8' }),
+  'src/Types/Auto.elm': fs.readFileSync('src/Types/Auto.elm', { encoding: 'utf8' }),
   'application': fs.readFileSync('src/Application.elm', { encoding: 'utf8' }),
   'document': fs.readFileSync('src/Document.elm', { encoding: 'utf8' }),
   'element': fs.readFileSync('src/Element.elm', { encoding: 'utf8' })
