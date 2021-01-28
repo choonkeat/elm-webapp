@@ -2,12 +2,12 @@
 watch:
 	#
 	# on ./src file changes, server will exit
-	# once recompile succeeds (retry every 5s), server will start
+	# once recompile succeeds (retry on file changes), server will start
 	#
 	# ctrl-c to shutdown gracefully
 	#
-	until make compile; do sleep 5; done
-	until node index.js --watch; do until make compile; do sleep 5; done; done
+	until make compile; do node scripts/wait-for-changes.js .; done
+	until node index.js --watch; do until make compile; do node scripts/wait-for-changes.js .; done; done
 
 # like `make watch` but without file watching loop
 run: compile
