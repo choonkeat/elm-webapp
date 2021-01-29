@@ -44,22 +44,26 @@ function lambdaHttpServer ({ app }) {
     ctx.callbackWaitsForEmptyEventLoop = false
 
     event.headers = event.headers || {} // blank when `lambda > test` or other events
+
+    // https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html
+    const requestPath = (event.path || event.rawPath || (event.requestContext && event.requestContext.http && event.requestContext.http.path))
+    const queryString = (event.multiValueQueryStringParameters ? toQueryString(event.multiValueQueryStringParameters) : event.rawQueryString)
     const url =
       (event.headers['CloudFront-Forwarded-Proto'] || 'https') + '://' +
-      (event.headers.Host || (event.requestContext && event.requestContext.domainName)) + event.path +
-      toQueryString(event.multiValueQueryStringParameters || {})
+      (event.headers.Host || (event.requestContext && event.requestContext.domainName)) +
+      requestPath + (queryString ? ('?' + queryString) : '')
 
     try {
       // try serving static file
-      let staticContent = fs.readFileSync('./public/assets/' + path.basename(event.path), { encoding: 'utf8', flag: 'r' })
+      let staticContent = fs.readFileSync('./public/assets/' + path.basename(requestPath), { encoding: 'utf8', flag: 'r' })
       const staticContentLength = staticContent.length
-      const etag = crypto.createHmac('SHA256', event.path).update(staticContent).digest('base64')
+      const etag = crypto.createHmac('SHA256', requestPath).update(staticContent).digest('base64')
 
       callback(null, {
         statusCode: 200,
         headers: {
           ETag: JSON.stringify(etag),
-          'Content-Type': mime.types[path.extname(event.path).substring(1)] || mime.default_type,
+          'Content-Type': mime.types[path.extname(requestPath).substring(1)] || mime.default_type,
           'Content-Length': '' + staticContentLength
         },
         body: staticContent.toString('base64')
@@ -76,7 +80,7 @@ function lambdaHttpServer ({ app }) {
         callback: callback,
         method: event.requestContext.httpMethod,
         url: url,
-        path: event.path,
+        path: requestPath,
         body: bodyString,
         headers: toLowerCaseKeys(event.headers)
       })
