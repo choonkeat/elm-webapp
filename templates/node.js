@@ -98,8 +98,17 @@ function nodeHttpServer ({ app, log }) {
   }
 
   var port = process.env.PORT || 8000
-  server.listen(port)
+  var listener = server.listen(port)
   log('server listening at', port, '...')
+
+  // https://stackoverflow.com/a/35480020
+  var lastSocketKey = 0
+  var socketMap = {}
+  listener.on('connection', function (socket) {
+    var socketKey = ++lastSocketKey
+    socketMap[socketKey] = socket
+    socket.on('close', function () { delete socketMap[socketKey] })
+  })
 
   const shutdown = (signal) => {
     log('signal received.')
@@ -115,6 +124,7 @@ function nodeHttpServer ({ app, log }) {
       wsServer.shutDown()
       log('[ws] server shutdown.')
     }
+    Object.keys(socketMap).forEach(function (socketKey) { socketMap[socketKey].destroy() })
   }
 
   process.on('SIGTERM', shutdown)
