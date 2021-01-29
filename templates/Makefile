@@ -47,3 +47,14 @@ package.json:
 	npm init -y
 	npm install --save xhr2 full-url node-static websocket
 	npm install --save-dev elm-auto-encoder-decoder
+
+#
+
+deploy-aws-lambda: FUNCTION_ZIP=$(FUNCTION_NAME).zip
+deploy-aws-lambda: compile
+	test -n "$(FUNCTION_NAME)" || (echo Missing FUNCTION_NAME; exit 1)
+	test -n "$(S3BUCKET)" || (echo Missing S3BUCKET; exit 1)
+	@echo Deploying $(FUNCTION_NAME) ...
+	zip -q -r $(FUNCTION_ZIP) . -i *.js 'js/*' 'build/*' 'node_modules/*' 'public/*'
+	time aws s3 cp $(FUNCTION_ZIP) s3://$(S3BUCKET)/$(FUNCTION_ZIP)
+	time aws lambda update-function-code --function-name $(FUNCTION_NAME) --s3-bucket $(S3BUCKET) --s3-key $(FUNCTION_ZIP) --publish
