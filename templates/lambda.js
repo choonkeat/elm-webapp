@@ -1,5 +1,9 @@
 function lambdaHttpServer ({ app }) {
+  const fs = require('fs')
+  const mime = require('mime')
   const path = require('path')
+  const zlib = require('zlib')
+  const crypto = require('crypto')
 
   function toQueryString (kvpairs) {
     const result = []
@@ -45,20 +49,38 @@ function lambdaHttpServer ({ app }) {
       (event.headers.Host || (event.requestContext && event.requestContext.domainName)) + event.path +
       toQueryString(event.multiValueQueryStringParameters || {})
 
-    const contentType = event.headers['Content-Type'] || ''
-    const encoding = (contentType.match(/; charset=(\S+)/) || ['', 'utf8'])[1] // charset or default to `utf8`
-    const bodyString = Buffer.from(event.body || '', event.isBase64Encoded ? 'base64' : null).toString(encoding)
-    event.headers['x-request-id'] = ctx.awsRequestId
+    try {
+      // try serving static file
+      let staticContent = fs.readFileSync('./public/assets/' + path.basename(event.path), { encoding: 'utf8', flag: 'r' })
+      const staticContentLength = staticContent.length
+      const etag = crypto.createHmac('SHA256', event.path).update(staticContent).digest('base64')
 
-    app.ports.onHttpRequest.send({
-      ctx: ctx,
-      callback: callback,
-      method: event.requestContext.httpMethod,
-      url: url,
-      path: event.path,
-      body: bodyString,
-      headers: toLowerCaseKeys(event.headers)
-    })
+      callback(null, {
+        statusCode: 200,
+        headers: {
+          ETag: JSON.stringify(etag),
+          'Content-Type': mime.types[path.extname(event.path).substring(1)] || mime.default_type,
+          'Content-Length': '' + staticContentLength
+        },
+        body: staticContent.toString('base64')
+      })
+    } catch (e) {
+      // not static file, send to elm
+      const contentType = event.headers['Content-Type'] || ''
+      const encoding = (contentType.match(/; charset=(\S+)/) || ['', 'utf8'])[1] // charset or default to `utf8`
+      const bodyString = Buffer.from(event.body || '', event.isBase64Encoded ? 'base64' : null).toString(encoding)
+      event.headers['x-request-id'] = ctx.awsRequestId
+
+      app.ports.onHttpRequest.send({
+        ctx: ctx,
+        callback: callback,
+        method: event.requestContext.httpMethod,
+        url: url,
+        path: event.path,
+        body: bodyString,
+        headers: toLowerCaseKeys(event.headers)
+      })
+    }
   }
 }
 
