@@ -3,7 +3,7 @@
     "name": "choonkeat/elm-fullstack",
     "summary": "Extensions for fullstack web development in Elm",
     "license": "MIT",
-    "version": "3.0.1",
+    "version": "3.1.0",
     "exposed-modules": [
         "Fullstack.Server.HTTP",
         "Fullstack.Server",

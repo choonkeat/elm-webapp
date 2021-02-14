@@ -1,5 +1,5 @@
 module Fullstack.Server exposing
-    ( PlatformWorker, Ports, Protocol
+    ( PlatformWorker, Ports, Protocol, Program
     , worker, writeResponse, writeWebsocketMessage
     )
 
@@ -8,7 +8,7 @@ module Fullstack.Server exposing
 
 # Definition
 
-@docs PlatformWorker, Ports, Protocol
+@docs PlatformWorker, Ports, Protocol, Program
 
 
 # Common Helpers
@@ -28,6 +28,17 @@ import Task
 import Time
 import Types
 import Url
+
+
+{-| Exported type to enable apps to write their type signature of `main`, e.g.
+
+    main : Fullstack.Server.Program Flags ServerState RequestContext Msg Error MsgFromServer
+    main =
+        Fullstack.Server.worker { ... }
+
+-}
+type alias Program flags model header msg x serverMsg =
+    Platform.Program flags (FrameworkModel model header) (FrameworkMsg msg x serverMsg)
 
 
 type FrameworkMsg msg x serverMsg
@@ -171,7 +182,7 @@ worker :
     , ports : Ports msg x serverMsg
     , protocol : Protocol msg x serverMsg clientMsg endpoint header model
     }
-    -> Program flags (FrameworkModel model header) (FrameworkMsg msg x serverMsg)
+    -> Platform.Program flags (FrameworkModel model header) (FrameworkMsg msg x serverMsg)
 worker ({ ports, protocol } as cfg) =
     Platform.worker
         { init = init cfg.worker.init
