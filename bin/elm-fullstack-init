@@ -62,6 +62,7 @@ writeResponse =
     Fullstack.Server.writeResponse onHttpResponse
 
 
+main : Fullstack.Server.Program Flags ServerState Types.RequestContext Msg String Types.MsgFromServer
 main =
     Fullstack.Server.worker
         { worker =
