@@ -196,8 +196,8 @@ updateFromClient ctx now clientMsg serverState =
 --
 
 
-headerDecoder : Json.Decode.Decoder Types.RequestContext
-headerDecoder =
+headerDecoder : ServerState -> Json.Decode.Decoder Types.RequestContext
+headerDecoder serverState =
     Json.Decode.oneOf
         [ Json.Decode.map Types.Cookied (Json.Decode.field "cookie" Json.Decode.string)
         , Json.Decode.succeed Types.Anonymous

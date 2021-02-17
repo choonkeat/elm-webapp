@@ -161,7 +161,7 @@ type alias Ports msg x serverMsg =
 
 -}
 type alias Protocol msg x serverMsg clientMsg route header model =
-    { headerDecoder : Json.Decode.Decoder header
+    { headerDecoder : model -> Json.Decode.Decoder header
     , clientMsgDecoder : Json.Decode.Decoder clientMsg
     , updateFromClient : header -> Time.Posix -> clientMsg -> model -> ( model, Task x serverMsg )
     , serverMsgEncoder : serverMsg -> Json.Encode.Value
@@ -250,7 +250,7 @@ update appUpdate ports protocol msg model =
 
                 maybeHeader =
                     headersOf request
-                        |> Json.Decode.decodeValue protocol.headerDecoder
+                        |> Json.Decode.decodeValue (protocol.headerDecoder model.appModel)
                         |> Result.toMaybe
 
                 clientMsgResult =
@@ -331,14 +331,14 @@ routeWebsocketRequest :
     Time.Posix
     -> (header -> Time.Posix -> clientMsg -> model -> ( model, Task x serverMsg ))
     -> Json.Decode.Decoder clientMsg
-    -> Json.Decode.Decoder header
+    -> (model -> Json.Decode.Decoder header)
     -> FrameworkModel model header
     -> Fullstack.Server.Websocket.WebsocketEvent
     -> ( FrameworkModel model header, Cmd (FrameworkMsg msg x serverMsg) )
 routeWebsocketRequest now updateFromClient clientMsgDecoder headerDecoder model event =
     case event of
         Fullstack.Server.Websocket.Open conn key rawHeaders ->
-            case Json.Decode.decodeValue headerDecoder rawHeaders of
+            case Json.Decode.decodeValue (headerDecoder model.appModel) rawHeaders of
                 Ok headers ->
                     let
                         newWebsockets =
