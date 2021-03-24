@@ -3,8 +3,8 @@ docs:
 
 build:
 	WATCHING=false elm-auto-encoder-decoder src/Types.elm
-	egrep -v '^function clientContent|return dict\[key\]' bin/elm-fullstack-init | pbcopy
+	egrep -v '^function clientContent|return dict\[key\]' bin/elm-webapp | pbcopy
 	(pbpaste; \
 	 printf "function clientContent(key) { const dict = "; \
 	 ./bin/generate-client-content; \
-	 printf "; return dict[key] }\n") > bin/elm-fullstack-init
+	 printf "; return dict[key] }\n") > bin/elm-webapp

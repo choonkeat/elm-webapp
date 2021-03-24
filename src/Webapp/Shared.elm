@@ -1,11 +1,11 @@
-module Fullstack.Shared exposing (..)
+module Webapp.Shared exposing (..)
 
 import Json.Decode
 import Json.Encode
 
 
 httpEndpoint =
-    "/api/elm-fullstack"
+    "/api/elm-webapp"
 
 
 

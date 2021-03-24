@@ -1,4 +1,4 @@
-module Fullstack.Server.Websocket exposing
+module Webapp.Server.Websocket exposing
     ( Connection
     , Headers
     , Key

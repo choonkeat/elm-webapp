@@ -1,4 +1,4 @@
-module Fullstack.Server.HTTP exposing
+module Webapp.Server.HTTP exposing
     ( Body, Headers, Method(..), Request, StatusCode(..), Url
     , bodyOf, headersOf, methodFromString, methodOf, methodString, pathOf, statusInt, urlOf
     )

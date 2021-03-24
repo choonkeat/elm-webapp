@@ -1,4 +1,4 @@
-module Fullstack.Client exposing
+module Webapp.Client exposing
     ( Ports, Protocol
     , element, document, application
     )
@@ -19,7 +19,7 @@ module Fullstack.Client exposing
 
 import Browser
 import Browser.Navigation
-import Fullstack.Shared
+import Webapp.Shared
 import Html
 import Http
 import Json.Decode
@@ -72,7 +72,7 @@ element :
         , subscriptions : model -> Sub msg
         }
 
-    -- Fullstack Extension
+    -- Webapp Extension
     , ports : Ports msg
     , protocol : Protocol serverMsg clientMsg model msg x
     }
@@ -86,9 +86,9 @@ element ({ ports, protocol } as cfg) =
             Http.task
                 { method = "POST"
                 , headers = []
-                , url = Fullstack.Shared.httpEndpoint
+                , url = Webapp.Shared.httpEndpoint
                 , body = Http.jsonBody (protocol.clientMsgEncoder m)
-                , resolver = Http.stringResolver (serverMsgFromResponse (Fullstack.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
+                , resolver = Http.stringResolver (serverMsgFromResponse (Webapp.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
                 , timeout = Just 60000
                 }
 
@@ -118,7 +118,7 @@ document :
         , subscriptions : model -> Sub msg
         }
 
-    -- Fullstack Extension
+    -- Webapp Extension
     , ports : Ports msg
     , protocol : Protocol serverMsg clientMsg model msg x
     }
@@ -132,9 +132,9 @@ document ({ ports, protocol } as cfg) =
             Http.task
                 { method = "POST"
                 , headers = []
-                , url = Fullstack.Shared.httpEndpoint
+                , url = Webapp.Shared.httpEndpoint
                 , body = Http.jsonBody (protocol.clientMsgEncoder m)
-                , resolver = Http.stringResolver (serverMsgFromResponse (Fullstack.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
+                , resolver = Http.stringResolver (serverMsgFromResponse (Webapp.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
                 , timeout = Just 60000
                 }
 
@@ -166,7 +166,7 @@ application :
         , onUrlChange : Url.Url -> msg
         }
 
-    -- Fullstack Extension
+    -- Webapp Extension
     , ports : Ports msg
     , protocol : Protocol serverMsg clientMsg model msg x
     }
@@ -180,9 +180,9 @@ application ({ ports, protocol } as cfg) =
             Http.task
                 { method = "POST"
                 , headers = []
-                , url = Fullstack.Shared.httpEndpoint
+                , url = Webapp.Shared.httpEndpoint
                 , body = Http.jsonBody (protocol.clientMsgEncoder m)
-                , resolver = Http.stringResolver (serverMsgFromResponse (Fullstack.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
+                , resolver = Http.stringResolver (serverMsgFromResponse (Webapp.Shared.decodeResultResult protocol.errorDecoder protocol.serverMsgDecoder))
                 , timeout = Just 60000
                 }
 
@@ -275,7 +275,7 @@ update appUpdate updateFromServer errorDecoder serverMsgDecoder msg model =
             WebSocketReceive messageString ->
                 let
                     decoder =
-                        Fullstack.Shared.decodeResultResult errorDecoder serverMsgDecoder
+                        Webapp.Shared.decodeResultResult errorDecoder serverMsgDecoder
                 in
                 case Json.Decode.decodeString decoder messageString of
                     Err jsonErr ->

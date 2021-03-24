@@ -2,7 +2,7 @@ module Element exposing (..)
 
 import Browser
 import Browser.Navigation
-import Fullstack.Client
+import Webapp.Client
 import Html exposing (Html, button, div, form, input, text)
 import Html.Attributes exposing (type_)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -26,8 +26,8 @@ import Url
 -- port websocketOut : String -> Cmd msg
 
 
-fullstack =
-    Fullstack.Client.element
+webapp =
+    Webapp.Client.element
         { element =
             { init = init
             , view = view
@@ -48,14 +48,14 @@ fullstack =
 
 
 main =
-    fullstack.element
+    webapp.element
 
 
 {-| Clients send messages to Server with this
 -}
 sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
 sendToServer =
-    fullstack.sendToServer
+    webapp.sendToServer
 
 
 type alias Flags =

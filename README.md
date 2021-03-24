@@ -1,17 +1,10 @@
-# Renamed to [choonkeat/elm-webapp](https://package.elm-lang.org/packages/choonkeat/elm-webapp/latest)
-
-Github repo at [https://github.com/choonkeat/elm-webapp](https://github.com/choonkeat/elm-webapp)
-
----
-
-## Fullstack
+# Elm-Webapp
 
 A setup for writing http based, client-server app in elm, inspired wholly by [Lamdera](https://lamdera.app)
-
-### Getting started
+## Getting started
 
 ```
-npx elm-fullstack element hello-app
+npx elm-webapp element hello-app
 ```
 
 This will create a skeleton file directory structure
@@ -34,8 +27,8 @@ hello-app
 
     To generate [Browser.document](https://package.elm-lang.org/packages/elm/browser/latest/Browser#document) or [Browser.application](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) instead, use either commands
     ```
-    npx elm-fullstack document hello-app
-    npx elm-fullstack application hello-app
+    npx elm-webapp document hello-app
+    npx elm-webapp application hello-app
     ```
 
 - `src/Server.elm` is where our elm [Platform.worker](https://package.elm-lang.org/packages/elm/core/latest/Platform#worker) resides. It serves your SPA by default, and can respond to `sendToServer`
@@ -43,9 +36,8 @@ hello-app
 - `index.js` boots up our Server.elm and listens to http requests at port 8000
 - `src/Types.elm` holds the types shared between Server and Client.
 - `src/Types/Auto.elm` contains [auto-generated Json Encoder and Decoder](https://github.com/choonkeat/elm-auto-encoder-decoder) for all types defined in `src/Types.elm`. See [notes regarding imported types](https://github.com/choonkeat/elm-auto-encoder-decoder#dont-be-alarmed-with-i-cannot-find--variable-compiler-errors).
+## License
 
-### License
-
-Copyright © 2020 Chew Choon Keat
+Copyright © 2021 Chew Choon Keat
 
 Distributed under the MIT license.

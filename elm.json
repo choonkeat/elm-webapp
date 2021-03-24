@@ -1,13 +1,13 @@
 {
     "type": "package",
-    "name": "choonkeat/elm-fullstack",
-    "summary": "Extensions for fullstack web development in Elm",
+    "name": "choonkeat/elm-webapp",
+    "summary": "Extensions for developing a fullstack webapp in Elm",
     "license": "MIT",
-    "version": "4.0.1",
+    "version": "1.0.0",
     "exposed-modules": [
-        "Fullstack.Server.HTTP",
-        "Fullstack.Server",
-        "Fullstack.Client"
+        "Webapp.Server.HTTP",
+        "Webapp.Server",
+        "Webapp.Client"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {

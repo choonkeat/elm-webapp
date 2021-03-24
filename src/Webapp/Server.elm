@@ -1,4 +1,4 @@
-module Fullstack.Server exposing
+module Webapp.Server exposing
     ( PlatformWorker, Ports, Protocol, Program
     , worker, writeResponse, writeWebsocketMessage
     )
@@ -18,9 +18,9 @@ module Fullstack.Server exposing
 -}
 
 import Dict exposing (Dict)
-import Fullstack.Server.HTTP exposing (Body, Headers, Method, Request, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
-import Fullstack.Server.Websocket
-import Fullstack.Shared
+import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
+import Webapp.Server.Websocket
+import Webapp.Shared
 import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
@@ -32,9 +32,9 @@ import Url
 
 {-| Exported type to enable apps to write their type signature of `main`, e.g.
 
-    main : Fullstack.Server.Program Flags ServerState RequestContext Msg Error MsgFromServer
+    main : Webapp.Server.Program Flags ServerState RequestContext Msg Error MsgFromServer
     main =
-        Fullstack.Server.worker { ... }
+        Webapp.Server.worker { ... }
 
 -}
 type alias Program flags model header msg x serverMsg =
@@ -46,14 +46,14 @@ type FrameworkMsg msg x serverMsg
     | OnHttpRequest (Maybe Time.Posix) Request
     | OnWebsocketEvent (Maybe Time.Posix) Json.Decode.Value
     | ReplyHttpClient Request (Result x serverMsg)
-    | ReplyWebsocketClient Fullstack.Server.Websocket.Key Fullstack.Server.Websocket.Connection (Result x serverMsg)
+    | ReplyWebsocketClient Webapp.Server.Websocket.Key Webapp.Server.Websocket.Connection (Result x serverMsg)
 
 
 type alias FrameworkModel a header =
     { appModel : a
 
     -- storing state, but not doing anything with it at the moment
-    , websockets : Dict Fullstack.Server.Websocket.Key { conn : Fullstack.Server.Websocket.Connection, headers : header }
+    , websockets : Dict Webapp.Server.Websocket.Key { conn : Webapp.Server.Websocket.Connection, headers : header }
     }
 
 
@@ -71,7 +71,7 @@ type alias PlatformWorker flags model msg =
     port onHttpResponse : Json.Encode.Value -> Cmd msg
 
     writeResponse =
-        Fullstack.Server.writeResponse onHttpResponse
+        Webapp.Server.writeResponse onHttpResponse
 
 -}
 writeResponse :
@@ -88,7 +88,7 @@ writeResponse onHttpResponse request { statusCode, body, headers } =
         portValue =
             Json.Encode.object
                 [ ( "request", request )
-                , ( "statusCode", Json.Encode.int (Fullstack.Server.HTTP.statusInt statusCode) )
+                , ( "statusCode", Json.Encode.int (Webapp.Server.HTTP.statusInt statusCode) )
                 , ( "body", Json.Encode.string body )
                 , ( "headers", Json.Encode.object headers )
                 ]
@@ -101,10 +101,10 @@ writeResponse onHttpResponse request { statusCode, body, headers } =
     port writeWs : Json.Encode.Value -> Cmd msg
 
     writeWebsocketMessage =
-        Fullstack.Server.writeWebsocketMessage writeWs
+        Webapp.Server.writeWebsocketMessage writeWs
 
 -}
-writeWebsocketMessage : (Json.Encode.Value -> Cmd msg) -> Fullstack.Server.Websocket.Connection -> Fullstack.Server.Websocket.Key -> String -> Cmd msg
+writeWebsocketMessage : (Json.Encode.Value -> Cmd msg) -> Webapp.Server.Websocket.Connection -> Webapp.Server.Websocket.Key -> String -> Cmd msg
 writeWebsocketMessage writeWs connection key body =
     let
         value =
@@ -124,7 +124,7 @@ writeWebsocketMessage writeWs connection key body =
         port onHttpResponse : Json.Encode.Value -> Cmd msg
 
         writeResponse =
-            Fullstack.Server.writeResponse onHttpResponse
+            Webapp.Server.writeResponse onHttpResponse
 
 
 
@@ -144,7 +144,7 @@ type alias Ports msg x serverMsg =
         -> Cmd (FrameworkMsg msg x serverMsg)
     , onHttpRequest : (Json.Encode.Value -> FrameworkMsg msg x serverMsg) -> Sub (FrameworkMsg msg x serverMsg)
     , onWebsocketEvent : (Json.Encode.Value -> FrameworkMsg msg x serverMsg) -> Sub (FrameworkMsg msg x serverMsg)
-    , writeWebsocketMessage : Fullstack.Server.Websocket.Connection -> Fullstack.Server.Websocket.Key -> String -> Cmd (FrameworkMsg msg x serverMsg)
+    , writeWebsocketMessage : Webapp.Server.Websocket.Connection -> Webapp.Server.Websocket.Key -> String -> Cmd (FrameworkMsg msg x serverMsg)
     }
 
 
@@ -157,7 +157,7 @@ type alias Ports msg x serverMsg =
       - `errorEncoder` encodes the response body for a failed `clientMsgDecoder`
   - `routeDecoder` decodes a `Url.Url`; if successful, `updateFromRoute` will be called
       - `updateFromRoute` is called as long as `headerDecoder` succeeds
-      - otherwise Fullstack.Server will respond with error 500
+      - otherwise Webapp.Server will respond with error 500
 
 -}
 type alias Protocol msg x serverMsg clientMsg route header model =
@@ -171,14 +171,14 @@ type alias Protocol msg x serverMsg clientMsg route header model =
     }
 
 
-{-| Returns a Fullstack.Server program, capable of communicating with Fullstack.Client program
+{-| Returns a Webapp.Server program, capable of communicating with Webapp.Client program
 -}
 worker :
     -- Platform.worker
     -- https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
     { worker : PlatformWorker flags model msg
 
-    -- Fullstack Extension
+    -- Webapp Extension
     , ports : Ports msg x serverMsg
     , protocol : Protocol msg x serverMsg clientMsg endpoint header model
     }
@@ -222,7 +222,7 @@ update appUpdate ports protocol msg model =
             ( model, Task.perform (\now -> OnWebsocketEvent (Just now) value) Time.now )
 
         OnWebsocketEvent (Just now) value ->
-            case Json.Decode.decodeValue Fullstack.Server.Websocket.decodeWebsocketEvent value of
+            case Json.Decode.decodeValue Webapp.Server.Websocket.decodeWebsocketEvent value of
                 Err err ->
                     ( model, Cmd.none )
 
@@ -234,7 +234,7 @@ update appUpdate ports protocol msg model =
             , ports.writeWebsocketMessage conn
                 key
                 (Json.Encode.encode 0
-                    (Fullstack.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
+                    (Webapp.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
                 )
             )
 
@@ -256,7 +256,7 @@ update appUpdate ports protocol msg model =
                 clientMsgResult =
                     Json.Decode.decodeString protocol.clientMsgDecoder (bodyOf request)
             in
-            case ( maybeHeader, clientMsgResult, pathOf request == Fullstack.Shared.httpEndpoint ) of
+            case ( maybeHeader, clientMsgResult, pathOf request == Webapp.Shared.httpEndpoint ) of
                 ( Just context, Ok clientmsg, True ) ->
                     let
                         ( newAppModel, updateTask ) =
@@ -294,7 +294,7 @@ update appUpdate ports protocol msg model =
         ReplyHttpClient request serverMsgResult ->
             let
                 body =
-                    Json.Encode.encode 0 (Fullstack.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
+                    Json.Encode.encode 0 (Webapp.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
             in
             ( model
             , ports.writeResponse
@@ -333,11 +333,11 @@ routeWebsocketRequest :
     -> Json.Decode.Decoder clientMsg
     -> (model -> Json.Decode.Decoder header)
     -> FrameworkModel model header
-    -> Fullstack.Server.Websocket.WebsocketEvent
+    -> Webapp.Server.Websocket.WebsocketEvent
     -> ( FrameworkModel model header, Cmd (FrameworkMsg msg x serverMsg) )
 routeWebsocketRequest now updateFromClient clientMsgDecoder headerDecoder model event =
     case event of
-        Fullstack.Server.Websocket.Open conn key rawHeaders ->
+        Webapp.Server.Websocket.Open conn key rawHeaders ->
             case Json.Decode.decodeValue (headerDecoder model.appModel) rawHeaders of
                 Ok headers ->
                     let
@@ -349,7 +349,7 @@ routeWebsocketRequest now updateFromClient clientMsgDecoder headerDecoder model 
                 Err err ->
                     ( model, Cmd.none )
 
-        Fullstack.Server.Websocket.Message conn key payload ->
+        Webapp.Server.Websocket.Message conn key payload ->
             let
                 clientMsgResult =
                     Json.Decode.decodeValue (Json.Decode.at [ "utf8Data" ] Json.Decode.string) payload
@@ -372,7 +372,7 @@ routeWebsocketRequest now updateFromClient clientMsgDecoder headerDecoder model 
                 invalidWsRequest ->
                     ( model, Cmd.none )
 
-        Fullstack.Server.Websocket.Close conn key reasonCode description ->
+        Webapp.Server.Websocket.Close conn key reasonCode description ->
             let
                 newWebsockets =
                     Dict.remove key model.websockets

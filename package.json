@@ -1,23 +1,24 @@
 {
   "bin": {
-    "elm-fullstack": "./bin/elm-fullstack-init",
-    "elm-fullstack-init": "./bin/elm-fullstack-init"
+    "elm-webapp": "./bin/elm-webapp"
   },
-  "name": "elm-fullstack",
-  "version": "4.0.1",
-  "description": "cli to initialize an elm-fullstack app",
-  "main": "bin/elm-fullstack-init",
+  "name": "elm-webapp",
+  "version": "1.0.0",
+  "description": "cli to initialize an elm-webapp app",
+  "main": "bin/elm-webapp",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/choonkeat/elm-fullstack.git"
+    "url": "git+https://github.com/choonkeat/elm-webapp.git"
   },
   "keywords": [
     "elm",
-    "fullstack",
-    "elm-fullstack",
+    "webapp",
+    "elm-webapp",
+    "webapp",
+    "elm-webapp",
     "http",
     "client",
     "server"
@@ -25,8 +26,8 @@
   "author": "choonkeat",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/choonkeat/elm-fullstack/issues"
+    "url": "https://github.com/choonkeat/elm-webapp/issues"
   },
-  "homepage": "https://github.com/choonkeat/elm-fullstack#readme",
+  "homepage": "https://github.com/choonkeat/elm-webapp#readme",
   "dependencies": {}
 }

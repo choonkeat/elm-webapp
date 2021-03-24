@@ -37,7 +37,7 @@ install: elm.json package.json
 	yes | elm install elm/json > /dev/null
 	yes | elm install elm/http > /dev/null
 	yes | elm install elm/time > /dev/null
-	yes | elm install choonkeat/elm-fullstack > /dev/null
+	yes | elm install choonkeat/elm-webapp > /dev/null
 	@printf "\nready. type \`make\` to start server\n\n"
 
 elm.json:

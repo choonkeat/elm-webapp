@@ -18,7 +18,7 @@ function nodeHttpServer ({ app, log }) {
         // if static file is found by fileServer, serve it
         if (!e || e.status !== 404) return
 
-        // otherwise, Fullstack.Server will handle the request
+        // otherwise, Webapp.Server will handle the request
         const contentType = req.headers['content-type'] || ''
         const encoding = (contentType.match(/; charset=(\S+)/) || ['', 'utf8'])[1] // charset or default to "utf8"
         const bodyString = Buffer.concat(body).toString(encoding)

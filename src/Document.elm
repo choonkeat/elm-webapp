@@ -2,7 +2,7 @@ module Document exposing (..)
 
 import Browser
 import Browser.Navigation
-import Fullstack.Client
+import Webapp.Client
 import Html exposing (Html, button, div, form, input, text)
 import Html.Attributes exposing (type_)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -26,8 +26,8 @@ import Url
 -- port websocketOut : String -> Cmd msg
 
 
-fullstack =
-    Fullstack.Client.document
+webapp =
+    Webapp.Client.document
         { document =
             { init = init
             , view = view
@@ -48,14 +48,14 @@ fullstack =
 
 
 main =
-    fullstack.document
+    webapp.document
 
 
 {-| Clients send messages to Server with this
 -}
 sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
 sendToServer =
-    fullstack.sendToServer
+    webapp.sendToServer
 
 
 type alias Flags =
@@ -85,7 +85,7 @@ init flags =
 
 view : Model -> Browser.Document Msg
 view model =
-    Browser.Document "Elm Fullstack Client"
+    Browser.Document "Elm Webapp Client"
         [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]
             [ input [ onInput SetGreeting ] []
             , button [ type_ "submit" ] [ text "Send to server" ]
