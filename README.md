@@ -1,8 +1,14 @@
-# Fullstack
+# Renamed to [choonkeat/elm-webapp](https://package.elm-lang.org/packages/choonkeat/elm-webapp/latest)
+
+Github repo at [https://github.com/choonkeat/elm-webapp](https://github.com/choonkeat/elm-webapp)
+
+---
+
+## Fullstack
 
 A setup for writing http based, client-server app in elm, inspired wholly by [Lamdera](https://lamdera.app)
 
-## Getting started
+### Getting started
 
 ```
 npx elm-fullstack element hello-app
@@ -38,7 +44,7 @@ hello-app
 - `src/Types.elm` holds the types shared between Server and Client.
 - `src/Types/Auto.elm` contains [auto-generated Json Encoder and Decoder](https://github.com/choonkeat/elm-auto-encoder-decoder) for all types defined in `src/Types.elm`. See [notes regarding imported types](https://github.com/choonkeat/elm-auto-encoder-decoder#dont-be-alarmed-with-i-cannot-find--variable-compiler-errors).
 
-## License
+### License
 
 Copyright © 2020 Chew Choon Keat
 
