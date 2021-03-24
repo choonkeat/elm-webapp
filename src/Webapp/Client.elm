@@ -1,5 +1,5 @@
 module Webapp.Client exposing
-    ( Ports, Protocol
+    ( Ports, Protocol, Program
     , element, document, application
     )
 
@@ -8,7 +8,7 @@ module Webapp.Client exposing
 
 # Definition
 
-@docs Ports, Protocol
+@docs Ports, Protocol, Program
 
 
 # Common Helpers
@@ -19,7 +19,6 @@ module Webapp.Client exposing
 
 import Browser
 import Browser.Navigation
-import Webapp.Shared
 import Html
 import Http
 import Json.Decode
@@ -27,6 +26,18 @@ import Json.Encode
 import Platform exposing (Task)
 import Time
 import Url
+import Webapp.Shared
+
+
+{-| Exported type to enable apps to write their type signature of `main`, e.g.
+
+    main : Webapp.Client.Program Flags Model Msg
+    main =
+        webapp.element
+
+-}
+type alias Program flags model msg =
+    Platform.Program flags model (FrameworkMsg msg)
 
 
 type FrameworkMsg a
@@ -77,7 +88,7 @@ element :
     , protocol : Protocol serverMsg clientMsg model msg x
     }
     ->
-        { element : Program flags model (FrameworkMsg msg)
+        { element : Platform.Program flags model (FrameworkMsg msg)
         , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
         }
 element ({ ports, protocol } as cfg) =
@@ -123,7 +134,7 @@ document :
     , protocol : Protocol serverMsg clientMsg model msg x
     }
     ->
-        { document : Program flags model (FrameworkMsg msg)
+        { document : Platform.Program flags model (FrameworkMsg msg)
         , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
         }
 document ({ ports, protocol } as cfg) =
@@ -171,7 +182,7 @@ application :
     , protocol : Protocol serverMsg clientMsg model msg x
     }
     ->
-        { application : Program flags model (FrameworkMsg msg)
+        { application : Platform.Program flags model (FrameworkMsg msg)
         , sendToServer : clientMsg -> Task Http.Error (Result x serverMsg)
         }
 application ({ ports, protocol } as cfg) =

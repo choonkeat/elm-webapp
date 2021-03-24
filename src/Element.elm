@@ -2,7 +2,6 @@ module Element exposing (..)
 
 import Browser
 import Browser.Navigation
-import Webapp.Client
 import Html exposing (Html, button, div, form, input, text)
 import Html.Attributes exposing (type_)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -14,6 +13,7 @@ import Task
 import Types
 import Types.Auto
 import Url
+import Webapp.Client
 
 
 
@@ -47,6 +47,7 @@ webapp =
         }
 
 
+main : Webapp.Client.Program Flags Model Msg
 main =
     webapp.element
 
