@@ -49,7 +49,7 @@ webapp =
 
 This record is where we provide our standard [Browser.element](https://package.elm-lang.org/packages/elm/browser/latest/Browser#element)
 
-```
+```elm
         , ports =
             { websocketConnected = \_ -> Sub.none -- websocketConnected
             , websocketIn = \_ -> Sub.none -- websocketIn
@@ -58,7 +58,7 @@ This record is where we provide our standard [Browser.element](https://package.e
 
 Here's where you can connect a WebSocket port implementation. Uncomment to enable.
 
-```
+```elm
         , protocol =
             { updateFromServer = updateFromServer
             , clientMsgEncoder = Types.Auto.encodeTypesMsgFromClient
@@ -88,15 +88,15 @@ that gives us our `main` function for the client.
 
 #### sendToServer
 
-sends `MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we've wired to handle in `updateFromServer` (see above)
-
-This is how we achieve a seamless and type-safe way for Client-Server communication.
-
 ```elm
 sendToServer : MsgFromClient -> Task Http.Error (Result String MsgFromServer)
 sendToServer =
     webapp.sendToServer
 ```
+
+sends `MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we've wired to handle in `updateFromServer` (see above)
+
+This is how we achieve a seamless and type-safe way for Client-Server communication.
 
 ## `src/Server.elm`
 
