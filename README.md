@@ -75,7 +75,7 @@ This section wires up the necessary functions to coordinate with `src/Server.elm
 ```elm
 updateFromServer : MsgFromServer -> Model -> ( Model, Cmd Msg )
 ```
-is the entry point where we handle `Types.MsgFromServer` values from `src/Server.elm`. We usually do a `case ... of` statement inside, much like how we write our standard `update` function
+is the entry point where we handle `MsgFromServer` values from `src/Server.elm`. We usually do a `case ... of` statement inside, much like how we write our standard `update` function
 
 #### main
 
@@ -88,9 +88,9 @@ that gives us our `main` function for the client.
 
 #### sendToServer
 
-used to send `Types.MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we're wired to handle in `updateFromServer` (see above)
+sends `MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we've wired to handle in `updateFromServer` (see above)
 
-This is a seamless way for Client-Server communication.
+This is how we achieve a seamless and type-safe way for Client-Server communication.
 
 ```elm
 sendToServer : MsgFromClient -> Task Http.Error (Result String MsgFromServer)
@@ -100,7 +100,7 @@ sendToServer =
 
 ## `src/Server.elm`
 
-serves our `Client` frontend app by default, and can respond to values from `Client.sendToServer`
+serves our `Client` frontend app by default, and can respond to values from `Client.sendToServer` or regular http requests.
 
 ```elm
 main : Program Flags ServerState RequestContext Msg String MsgFromServer
