@@ -32,7 +32,7 @@ npx elm-webapp document hello-app
 npx elm-webapp application hello-app
 ```
 
-### `src/Client.elm`
+## `src/Client.elm`
 
 In this file, we see
 
@@ -73,9 +73,9 @@ This section wires up the necessary functions to coordinate with `src/Server.elm
 #### updateFromServer
 
 ```elm
-updateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )
+updateFromServer : MsgFromServer -> Model -> ( Model, Cmd Msg )
 ```
-is the entry point where we handle `MsgFromServer` values from `src/Server.elm`. We usually do a `case ... of` statement inside, much like how write our standard `update` function
+is the entry point where we handle `Types.MsgFromServer` values from `src/Server.elm`. We usually do a `case ... of` statement inside, much like how we write our standard `update` function
 
 #### main
 
@@ -88,20 +88,22 @@ that gives us our `main` function for the client.
 
 #### sendToServer
 
-We also get a freebie `sendToServer` function that we can use to send `MsgFromClient` values to our server.
+used to send `Types.MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we're wired to handle in `updateFromServer` (see above)
+
+This is a seamless way for Client-Server communication.
 
 ```elm
-sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
+sendToServer : MsgFromClient -> Task Http.Error (Result String MsgFromServer)
 sendToServer =
     webapp.sendToServer
 ```
 
-### `src/Server.elm`
+## `src/Server.elm`
 
-serves our `Client` SPA by default, and can respond to values from `sendToServer`
+serves our `Client` frontend app by default, and can respond to values from `Client.sendToServer`
 
 ```elm
-main : Webapp.Server.Program Flags ServerState Types.RequestContext Msg String Types.MsgFromServer
+main : Program Flags ServerState RequestContext Msg String MsgFromServer
 main =
     Webapp.Server.worker
         { worker =
@@ -121,7 +123,7 @@ This record is where we provide our standard [Platform.worker](https://package.e
             }
 ```
 
-Here's where we've connected our Http server ports. You can connect a WebSocket port implementation too; uncomment to enable.
+Here's where we've connected our httpserver with Elm ports. You can connect a WebSocket server Elm port too; uncomment to enable.
 
 ```elm
         , protocol =
@@ -142,14 +144,14 @@ This section wires up the necessary functions to coordinate with `src/Client.elm
 ```elm
 updateFromClient : RequestContext -> Time.Posix -> MsgFromClient -> ServerState -> ( ServerState, Task String MsgFromServer )
 ```
-this function is called whenever the `Client` sends a value over with its `sendToServer`. We usually do a `case ... of` statement inside, much like how write our standard `update` function
+is called whenever the `Client` sends a value over with its `sendToServer`. We usually do a `case ... of` statement inside, much like how we write our standard `update` function
 
 #### updateFromRoute
 
 ```elm
 updateFromRoute : ( Method, RequestContext, Maybe Route ) -> Time.Posix -> Request -> ServerState -> ( ServerState, Cmd Msg )
 ```
-This is the catch-all handler for http request; called whenever `Server` has to handle a http request that isn't handled by `updateFromClient`. e.g. oauth redirect path.
+is the catch-all handler for http request; called whenever `Server` has to handle a http request that isn't handled by `updateFromClient`. e.g. oauth redirect path.
 
 Note that `ServerState` is simply `Model` you see in standard Elm apps; named differently.
 
@@ -158,7 +160,7 @@ Note that `ServerState` is simply `Model` you see in standard Elm apps; named di
 ```elm
 headerDecoder : ServerState -> Json.Decode.Decoder RequestContext
 ```
-this decoder is applied to the http request headers and should give us a more meaningfully categorised `RequestContext` . e.g. we can decode `Authorization` header and determine if the JWT value gives us a valid `LoggedInUser Email` or an `AnonymousUser`
+is applied to http request headers and gives us a more meaningfully categorised `RequestContext` . e.g. we can decode the `Authorization` header and determine if the JWT value gives us a valid `LoggedInUser Email` or an `AnonymousUser`
 
 This difference can be put into good use when we handle `updateFromClient` or `updateFromRoute`
 
