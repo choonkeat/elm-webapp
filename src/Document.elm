@@ -26,6 +26,10 @@ import Webapp.Client
 -- port websocketOut : String -> Cmd msg
 
 
+webapp :
+    { document : Webapp.Client.Program Flags Model Msg
+    , sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
+    }
 webapp =
     Webapp.Client.document
         { document =
@@ -54,9 +58,9 @@ main =
 
 {-| Clients send messages to Server with this
 -}
-sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
+sendToServer : Types.MsgFromClient -> Cmd Msg
 sendToServer =
-    webapp.sendToServer
+    webapp.sendToServer >> Task.attempt OnMsgFromServer
 
 
 type alias Flags =
@@ -118,7 +122,7 @@ update msg model =
 
         SendMessage clientMsg ->
             -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )
-            ( model, Task.attempt OnMsgFromServer (sendToServer clientMsg) )
+            ( model, sendToServer clientMsg )
 
         SetGreeting s ->
             ( { model | greeting = s }, Cmd.none )
