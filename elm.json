@@ -1,9 +1,9 @@
 {
     "type": "package",
     "name": "choonkeat/elm-webapp",
-    "summary": "Extensions for developing a fullstack webapp in Elm",
+    "summary": "Small framework for writing fullstack HTTP webapp in Elm. `npx elm-webapp` to get started",
     "license": "MIT",
-    "version": "1.0.1",
+    "version": "1.2.0",
     "exposed-modules": [
         "Webapp.Server.HTTP",
         "Webapp.Server",

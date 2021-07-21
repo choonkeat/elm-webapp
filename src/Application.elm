@@ -10,8 +10,8 @@ import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
 import Task
-import Types
-import Types.Auto
+import Protocol
+import Protocol.Auto
 import Url
 import Webapp.Client
 
@@ -28,7 +28,7 @@ import Webapp.Client
 
 webapp :
     { application : Webapp.Client.Program Flags Model Msg
-    , sendToServer : Types.MsgFromClient -> Task Http.Error (Result String Types.MsgFromServer)
+    , sendToServer : Protocol.MsgFromClient -> Task Http.Error (Result String Protocol.MsgFromServer)
     }
 webapp =
     Webapp.Client.application
@@ -46,8 +46,8 @@ webapp =
             }
         , protocol =
             { updateFromServer = updateFromServer
-            , clientMsgEncoder = Types.Auto.encodeTypesMsgFromClient
-            , serverMsgDecoder = Types.Auto.decodeTypesMsgFromServer
+            , clientMsgEncoder = Protocol.Auto.encodeProtocolMsgFromClient
+            , serverMsgDecoder = Protocol.Auto.decodeProtocolMsgFromServer
             , errorDecoder = Json.Decode.string
             }
         }
@@ -60,7 +60,7 @@ main =
 
 {-| Clients send messages to Server with this
 -}
-sendToServer : Types.MsgFromClient -> Cmd Msg
+sendToServer : Protocol.MsgFromClient -> Cmd Msg
 sendToServer =
     webapp.sendToServer >> Task.attempt OnMsgFromServer
 
@@ -79,8 +79,8 @@ type alias Model =
 type Msg
     = OnUrlRequest Browser.UrlRequest
     | OnUrlChange Url.Url
-    | OnMsgFromServer (Result Http.Error (Result String Types.MsgFromServer))
-    | SendMessage Types.MsgFromClient
+    | OnMsgFromServer (Result Http.Error (Result String Protocol.MsgFromServer))
+    | SendMessage Protocol.MsgFromClient
     | SetGreeting String
 
 
@@ -97,7 +97,7 @@ init flags url navKey =
 view : Model -> Browser.Document Msg
 view model =
     Browser.Document "Elm Webapp Client"
-        [ form [ onSubmit (SendMessage (Types.SetGreeting model.greeting)) ]
+        [ form [ onSubmit (SendMessage (Protocol.SetGreeting model.greeting)) ]
             [ input [ onInput SetGreeting ] []
             , button [ type_ "submit" ] [ text "Send to server" ]
             ]
@@ -135,17 +135,17 @@ update msg model =
             updateFromServer serverMsg model
 
         SendMessage clientMsg ->
-            -- ( model, websocketOut (Json.Encode.encode 0 (Types.encodeTypesMsgFromClient clientMsg)) )
+            -- ( model, websocketOut (Json.Encode.encode 0 (Protocol.encodeProtocolMsgFromClient clientMsg)) )
             ( model, sendToServer clientMsg )
 
         SetGreeting s ->
             ( { model | greeting = s }, Cmd.none )
 
 
-updateFromServer : Types.MsgFromServer -> Model -> ( Model, Cmd Msg )
+updateFromServer : Protocol.MsgFromServer -> Model -> ( Model, Cmd Msg )
 updateFromServer serverMsg model =
     case serverMsg of
-        Types.CurrentGreeting s ->
+        Protocol.CurrentGreeting s ->
             ( { model | serverGreeting = s }, Cmd.none )
 
 

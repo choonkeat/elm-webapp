@@ -13,21 +13,21 @@ watch:
 run: compile
 	node index.js
 
-compile: elm.json package.json src/Types/Auto.elm build/Server.js public/assets/client.js
+compile: elm.json package.json src/Protocol/Auto.elm build/Server.js public/assets/client.js
 
-src/Types/Auto.elm: src/Types.elm
+src/Protocol/Auto.elm: src/Protocol.elm
 	#
-	# for every type in `src/Types.elm`
-	# generate a json encoder/decoder in `src/Types/Auto.elm`
+	# for every type in `src/Protocol.elm`
+	# generate a json encoder/decoder in `src/Protocol/Auto.elm`
 	#
 	# read more at https://github.com/choonkeat/elm-auto-encoder-decoder
 	#
-	WATCHING=false elm-auto-encoder-decoder src/Types.elm
+	WATCHING=false elm-auto-encoder-decoder src/Protocol.elm
 
-build/Server.js: src/Server.elm src/Types.elm
+build/Server.js: src/Server.elm src/Protocol.elm
 	elm make src/Server.elm --output build/Server.js
 
-public/assets/client.js: src/Client.elm src/Types.elm
+public/assets/client.js: src/Client.elm src/Protocol.elm
 	elm make src/Client.elm --output public/assets/client.js
 
 #

@@ -1,4 +1,4 @@
-module Types exposing (..)
+module Protocol exposing (..)
 
 import Json.Decode
 import Json.Encode

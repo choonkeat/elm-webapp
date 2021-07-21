@@ -19,8 +19,8 @@ hello-app
 └── src
     ├── Client.elm
     ├── Server.elm
-    ├── Types.elm
-    └── Types
+    ├── Protocol.elm
+    └── Protocol
         └── Auto.elm
 
 1 directory, 5 files
@@ -64,8 +64,8 @@ By default, `elm-webapp` is wired up to communicate with `src/Server.elm` throug
 ```elm
         , protocol =
             { updateFromServer = updateFromServer
-            , clientMsgEncoder = Types.Auto.encodeTypesMsgFromClient
-            , serverMsgDecoder = Types.Auto.decodeTypesMsgFromServer
+            , clientMsgEncoder = Protocol.Auto.encodeProtocolMsgFromClient
+            , serverMsgDecoder = Protocol.Auto.decodeProtocolMsgFromServer
             , errorDecoder = Json.Decode.string
             }
         }
@@ -92,9 +92,9 @@ that gives us our `main` function for the client.
 #### sendToServer
 
 ```elm
-sendToServer : MsgFromClient -> Task Http.Error (Result String MsgFromServer)
+sendToServer : Protocol.MsgFromClient -> Cmd Msg
 sendToServer =
-    webapp.sendToServer
+    webapp.sendToServer >> Task.attempt OnMsgFromServer
 ```
 
 sends `MsgFromClient` values to our server whereby the server must respond with a `MsgFromServer` that we've wired to handle in `updateFromServer` (see above). This happens over http post by default, and over websockets if enabled (see above)
@@ -133,8 +133,8 @@ main =
             { routeDecoder = routeDecoder
             , updateFromRoute = updateFromRoute
             , updateFromClient = updateFromClient
-            , serverMsgEncoder = Types.Auto.encodeTypesMsgFromServer
-            , clientMsgDecoder = Types.Auto.decodeTypesMsgFromClient
+            , serverMsgEncoder = Protocol.Auto.encodeProtocolMsgFromServer
+            , clientMsgDecoder = Protocol.Auto.decodeProtocolMsgFromClient
             , headerDecoder = headerDecoder
             , errorEncoder = Json.Encode.string
             }
@@ -174,8 +174,8 @@ This difference can be put into good use when we handle `updateFromClient` or `u
 	- if env `LAMBDA` is set, `lambda.js` will instead setup a callback so we can handle http request inside [AWS Lambda behind an API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-with-lambda-integration.html).
 	- other possible integrations are `cloudflare-workers.js` or even [`deno-deploy.js`](https://deno.com/deploy)
 	- PRs are extremely welcome to improve the robustness of these integrations 🙇‍♂️
-- `src/Types.elm` holds the types shared between Server and Client.
-    - [encoders & decoders are auto-generated](https://github.com/choonkeat/elm-auto-encoder-decoder) in `src/Types/Auto.elm` ; also see [gotchas regarding imported types](https://github.com/choonkeat/elm-auto-encoder-decoder#dont-be-alarmed-with-i-cannot-find--variable-compiler-errors)
+- `src/Protocol.elm` holds the types shared between Server and Client.
+    - [encoders & decoders are auto-generated](https://github.com/choonkeat/elm-auto-encoder-decoder) in `src/Protocol/Auto.elm` ; also see [gotchas regarding imported types](https://github.com/choonkeat/elm-auto-encoder-decoder#dont-be-alarmed-with-i-cannot-find--variable-compiler-errors)
     - we're using `elm-auto-encoder-decoder` in `elm-webapp` only for convenience; you can switch it out for your own encoders & decoders. BUT if you continue using `elm-auto-encoder-decoder`, don't use them anywhere else (e.g. as encoder to save in db, exposed as part of your external api, etc...). Main reason being that the serialized format could change future releases of `elm-auto-encoder-decoder` and thus MUST NOT be relied on.
 
 ## License

@@ -27,7 +27,7 @@ import Json.Encode
 import Platform exposing (Task)
 import Task
 import Time
-import Types
+import Protocol
 import Url
 import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
 import Webapp.Server.Websocket
