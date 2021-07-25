@@ -25,11 +25,11 @@ import Dict exposing (Dict)
 import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
+import Protocol
 import Task
 import Time
-import Protocol
 import Url
-import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
+import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, Response, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
 import Webapp.Server.Websocket
 import Webapp.Shared
 
@@ -81,11 +81,7 @@ type alias PlatformWorker flags model msg =
 writeResponse :
     (Json.Encode.Value -> Cmd msg)
     -> Request
-    ->
-        { statusCode : StatusCode
-        , headers : List ( String, Json.Encode.Value )
-        , body : String
-        }
+    -> Response
     -> Cmd msg
 writeResponse onHttpResponse request { statusCode, body, headers } =
     let
@@ -138,14 +134,7 @@ writeWebsocketMessage writeWs connection key body =
 
 -}
 type alias Ports msg x serverMsg =
-    { writeResponse :
-        Request
-        ->
-            { statusCode : StatusCode
-            , headers : List ( String, Json.Encode.Value )
-            , body : String
-            }
-        -> Cmd (FrameworkMsg msg x serverMsg)
+    { writeResponse : Request -> Response -> Cmd (FrameworkMsg msg x serverMsg)
     , onHttpRequest : (Json.Encode.Value -> FrameworkMsg msg x serverMsg) -> Sub (FrameworkMsg msg x serverMsg)
     , onWebsocketEvent : (Json.Encode.Value -> FrameworkMsg msg x serverMsg) -> Sub (FrameworkMsg msg x serverMsg)
     , writeWebsocketMessage : Webapp.Server.Websocket.Connection -> Webapp.Server.Websocket.Key -> String -> Cmd (FrameworkMsg msg x serverMsg)

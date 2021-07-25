@@ -9,9 +9,9 @@ import Http
 import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
-import Task
 import Protocol
 import Protocol.Auto
+import Task
 import Url
 import Webapp.Client
 

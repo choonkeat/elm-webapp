@@ -24,10 +24,10 @@ src/Protocol/Auto.elm: src/Protocol.elm
 	#
 	WATCHING=false elm-auto-encoder-decoder src/Protocol.elm
 
-build/Server.js: src/**/*.elm
+build/Server.js: src/*.elm src/**/*.elm
 	elm make src/Server.elm --output build/Server.js
 
-public/assets/client.js: src/**/*.elm
+public/assets/client.js: src/*.elm src/**/*.elm
 	elm make src/Client.elm --output public/assets/client.js
 
 #

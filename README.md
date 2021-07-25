@@ -178,6 +178,10 @@ This difference can be put into good use when we handle `updateFromClient` or `u
     - [encoders & decoders are auto-generated](https://github.com/choonkeat/elm-auto-encoder-decoder) in `src/Protocol/Auto.elm` ; also see [gotchas regarding imported types](https://github.com/choonkeat/elm-auto-encoder-decoder#dont-be-alarmed-with-i-cannot-find--variable-compiler-errors)
     - we're using `elm-auto-encoder-decoder` in `elm-webapp` only for convenience; you can switch it out for your own encoders & decoders. BUT if you continue using `elm-auto-encoder-decoder`, don't use them anywhere else (e.g. as encoder to save in db, exposed as part of your external api, etc...). Main reason being that the serialized format could change future releases of `elm-auto-encoder-decoder` and thus MUST NOT be relied on.
 
+## How do I...
+
+- Support OAuth login? See https://github.com/choonkeat/elm-webapp-oauth-example#readme
+
 ## License
 
 Copyright © 2021 Chew Choon Keat

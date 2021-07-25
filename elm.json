@@ -3,7 +3,7 @@
     "name": "choonkeat/elm-webapp",
     "summary": "Small framework for writing fullstack HTTP webapp in Elm. Try `npx elm-webapp`",
     "license": "MIT",
-    "version": "1.0.2",
+    "version": "2.0.0",
     "exposed-modules": [
         "Webapp.Server.HTTP",
         "Webapp.Server",

@@ -1,5 +1,5 @@
 module Webapp.Server.HTTP exposing
-    ( Body, Headers, Method(..), Request, StatusCode(..), Url
+    ( Body, Headers, Method(..), Request, Response, StatusCode(..), Url
     , bodyOf, headersOf, methodFromString, methodOf, methodString, pathOf, statusInt, urlOf
     )
 
@@ -8,7 +8,7 @@ module Webapp.Server.HTTP exposing
 
 # Definition
 
-@docs Body, Headers, Method, Request, StatusCode, Url
+@docs Body, Headers, Method, Request, Response, StatusCode, Url
 
 
 # Common Helpers
@@ -120,6 +120,14 @@ methodFromString str =
 -}
 type alias Request =
     Json.Decode.Value
+
+
+{-| -}
+type alias Response =
+    { statusCode : StatusCode
+    , headers : List ( String, Json.Encode.Value )
+    , body : String
+    }
 
 
 {-| Alias for opaque Json.Encode.Value
