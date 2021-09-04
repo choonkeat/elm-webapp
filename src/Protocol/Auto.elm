@@ -196,18 +196,20 @@ decodeResult argx arga =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
 encodeProtocolMsgFromClient : Protocol.MsgFromClient -> Json.Encode.Value
 encodeProtocolMsgFromClient value =
     case value of
+        (Protocol.ManyMsgFromClient m0) -> (Json.Encode.list identity [ encodeString "Protocol.ManyMsgFromClient", (encodeList (encodeProtocolMsgFromClient) m0) ])
         (Protocol.SetGreeting m0) -> (Json.Encode.list identity [ encodeString "Protocol.SetGreeting", (encodeString m0) ])
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
 encodeProtocolMsgFromServer : Protocol.MsgFromServer -> Json.Encode.Value
 encodeProtocolMsgFromServer value =
     case value of
+        (Protocol.ManyMsgFromServer m0) -> (Json.Encode.list identity [ encodeString "Protocol.ManyMsgFromServer", (encodeList (encodeProtocolMsgFromServer) m0) ])
         (Protocol.CurrentGreeting m0) -> (Json.Encode.list identity [ encodeString "Protocol.CurrentGreeting", (encodeString m0) ])
 
 
@@ -219,13 +221,14 @@ encodeProtocolRequestContext value =
         (Protocol.Cookied m0) -> (Json.Encode.list identity [ encodeString "Protocol.Cookied", (encodeString m0) ])
         (Protocol.Anonymous) -> (Json.Encode.list identity [ encodeString "Protocol.Anonymous" ])
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
 decodeProtocolMsgFromClient : Json.Decode.Decoder (Protocol.MsgFromClient)
 decodeProtocolMsgFromClient  =
     Json.Decode.index 0 Json.Decode.string
         |> Json.Decode.andThen
             (\word ->
                 case word of
+                    "Protocol.ManyMsgFromClient" -> (Json.Decode.succeed Protocol.ManyMsgFromClient |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeList (decodeProtocolMsgFromClient)))))
                     "Protocol.SetGreeting" -> (Json.Decode.succeed Protocol.SetGreeting |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeString))))
                     _ -> Json.Decode.fail ("Unexpected Protocol.MsgFromClient: " ++ word)
             )
@@ -233,13 +236,14 @@ decodeProtocolMsgFromClient  =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
 decodeProtocolMsgFromServer : Json.Decode.Decoder (Protocol.MsgFromServer)
 decodeProtocolMsgFromServer  =
     Json.Decode.index 0 Json.Decode.string
         |> Json.Decode.andThen
             (\word ->
                 case word of
+                    "Protocol.ManyMsgFromServer" -> (Json.Decode.succeed Protocol.ManyMsgFromServer |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeList (decodeProtocolMsgFromServer)))))
                     "Protocol.CurrentGreeting" -> (Json.Decode.succeed Protocol.CurrentGreeting |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeString))))
                     _ -> Json.Decode.fail ("Unexpected Protocol.MsgFromServer: " ++ word)
             )

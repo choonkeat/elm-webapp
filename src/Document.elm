@@ -131,6 +131,15 @@ update msg model =
 updateFromServer : Protocol.MsgFromServer -> Model -> ( Model, Cmd Msg )
 updateFromServer serverMsg model =
     case serverMsg of
+        Protocol.ManyMsgFromServer msglist ->
+            -- Handling a batched list of `MsgFromServer`
+            let
+                overModelAndCmd nextMsg ( currentModel, currentCmd ) =
+                    updateFromServer nextMsg currentModel
+                        |> Tuple.mapSecond (\nextCmd -> Cmd.batch [ nextCmd, currentCmd ])
+            in
+            List.foldl overModelAndCmd ( model, Cmd.none ) msglist
+
         Protocol.CurrentGreeting s ->
             ( { model | serverGreeting = s }, Cmd.none )
 

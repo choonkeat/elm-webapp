@@ -7,13 +7,15 @@ import Json.Encode
 {-| All messages that Client can send to Server
 -}
 type MsgFromClient
-    = SetGreeting String
+    = ManyMsgFromClient (List MsgFromClient)
+    | SetGreeting String
 
 
 {-| All messages that Server can reply to Client
 -}
 type MsgFromServer
-    = CurrentGreeting String
+    = ManyMsgFromServer (List MsgFromServer)
+    | CurrentGreeting String
 
 
 {-| Http headers will be parsed into a RequestContext
