@@ -15,6 +15,7 @@ type MsgFromClient
 -}
 type MsgFromServer
     = ManyMsgFromServer (List MsgFromServer)
+    | ClientServerVersionMismatch Json.Encode.Value
     | CurrentGreeting String
 
 

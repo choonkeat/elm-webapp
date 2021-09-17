@@ -47,7 +47,11 @@ webapp =
         , protocol =
             { updateFromServer = updateFromServer
             , clientMsgEncoder = Protocol.Auto.encodeProtocolMsgFromClient
-            , serverMsgDecoder = Protocol.Auto.decodeProtocolMsgFromServer
+            , serverMsgDecoder =
+                Json.Decode.oneOf
+                    [ Protocol.Auto.decodeProtocolMsgFromServer
+                    , Json.Decode.map Protocol.ClientServerVersionMismatch Json.Decode.value
+                    ]
             , errorDecoder = Json.Decode.string
             }
         }
@@ -153,6 +157,11 @@ updateFromServer serverMsg model =
                         |> Tuple.mapSecond (\nextCmd -> Cmd.batch [ nextCmd, currentCmd ])
             in
             List.foldl overModelAndCmd ( model, Cmd.none ) msglist
+
+        Protocol.ClientServerVersionMismatch raw ->
+            ( { model | serverGreeting = "Oops! This page has expired. Please reload this page in your browser." }
+            , Cmd.none
+            )
 
         Protocol.CurrentGreeting s ->
             ( { model | serverGreeting = s }, Cmd.none )

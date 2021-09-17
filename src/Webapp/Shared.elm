@@ -4,6 +4,7 @@ import Json.Decode
 import Json.Encode
 
 
+httpEndpoint : String
 httpEndpoint =
     "/api/elm-webapp"
 
