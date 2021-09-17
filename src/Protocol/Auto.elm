@@ -5,6 +5,7 @@ module Protocol.Auto exposing (..)
 
 
 import Protocol exposing (..)
+import Array
 import Dict
 import Json.Decode
 import Json.Encode
@@ -39,6 +40,11 @@ encodeBool =
 encodeList : (a -> Json.Encode.Value) -> List a -> Json.Encode.Value
 encodeList =
     Json.Encode.list
+
+
+encodeArrayArray : (a -> Json.Encode.Value) -> Array.Array a -> Json.Encode.Value
+encodeArrayArray =
+    Json.Encode.array
 
 
 encodeSetSet : (comparable -> Json.Encode.Value) -> Set.Set comparable -> Json.Encode.Value
@@ -103,6 +109,11 @@ decodeBool =
 decodeList : (Json.Decode.Decoder a) -> Json.Decode.Decoder (List a)
 decodeList =
     Json.Decode.list
+
+
+decodeArrayArray : (Json.Decode.Decoder a) -> Json.Decode.Decoder (Array.Array a)
+decodeArrayArray =
+    Json.Decode.array
 
 
 decodeSetSet : (Json.Decode.Decoder comparable) -> Json.Decode.Decoder (Set.Set comparable)
