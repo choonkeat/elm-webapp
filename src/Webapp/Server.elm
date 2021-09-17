@@ -31,7 +31,6 @@ import Time
 import Url
 import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, Response, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
 import Webapp.Server.Websocket
-import Webapp.Shared
 
 
 {-| Exported type to enable apps to write their type signature of `main`, e.g.
@@ -160,6 +159,7 @@ type alias Protocol msg x serverMsg clientMsg route header model =
     , serverMsgEncoder : serverMsg -> Json.Encode.Value
     , errorEncoder : x -> Json.Encode.Value
     , routeDecoder : Url.Url -> Maybe route
+    , httpEndpoint : String
     , updateFromRoute : ( Method, header, Maybe route ) -> Time.Posix -> Request -> model -> ( model, Cmd msg )
     }
 
@@ -227,7 +227,7 @@ update appUpdate ports protocol msg model =
             , ports.writeWebsocketMessage conn
                 key
                 (Json.Encode.encode 0
-                    (Webapp.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
+                    (encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
                 )
             )
 
@@ -249,7 +249,7 @@ update appUpdate ports protocol msg model =
                 clientMsgResult =
                     Json.Decode.decodeString protocol.clientMsgDecoder (bodyOf request)
             in
-            case ( maybeHeader, clientMsgResult, pathOf request == Webapp.Shared.httpEndpoint ) of
+            case ( maybeHeader, clientMsgResult, pathOf request == protocol.httpEndpoint ) of
                 ( Just context, Ok clientmsg, True ) ->
                     let
                         ( newAppModel, updateTask ) =
@@ -287,7 +287,7 @@ update appUpdate ports protocol msg model =
         ReplyHttpClient request serverMsgResult ->
             let
                 body =
-                    Json.Encode.encode 0 (Webapp.Shared.encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
+                    Json.Encode.encode 0 (encodeResultResult protocol.errorEncoder protocol.serverMsgEncoder serverMsgResult)
             in
             ( model
             , ports.writeResponse
@@ -371,3 +371,13 @@ routeWebsocketRequest now updateFromClient clientMsgDecoder headerDecoder model 
                     Dict.remove key model.websockets
             in
             ( { model | websockets = newWebsockets }, Cmd.none )
+
+
+encodeResultResult : (x -> Json.Encode.Value) -> (a -> Json.Encode.Value) -> Result.Result x a -> Json.Encode.Value
+encodeResultResult encodex encodea result =
+    case result of
+        Err x ->
+            Json.Encode.list identity [ Json.Encode.string "Err", encodex x ]
+
+        Ok a ->
+            Json.Encode.list identity [ Json.Encode.string "Ok", encodea a ]

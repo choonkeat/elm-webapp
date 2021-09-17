@@ -39,7 +39,6 @@ import Time
 import Url
 import Webapp.Server
 import Webapp.Server.HTTP exposing (Method(..), Request, Response, StatusCode(..))
-import Webapp.Shared
 
 
 
@@ -86,6 +85,7 @@ main =
             , clientMsgDecoder = Protocol.Auto.decodeProtocolMsgFromClient
             , headerDecoder = headerDecoder
             , errorEncoder = Json.Encode.string
+            , httpEndpoint = Protocol.httpEndpoint
             }
         }
 
@@ -157,7 +157,7 @@ routeDecoder urlUrl =
             Just Homepage
 
         _ ->
-            if Webapp.Shared.httpEndpoint == urlUrl.path then
+            if Protocol.httpEndpoint == urlUrl.path then
                 Just ApiElmWebapp
 
             else

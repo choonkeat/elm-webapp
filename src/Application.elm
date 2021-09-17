@@ -53,6 +53,7 @@ webapp =
                     , Json.Decode.map Protocol.ClientServerVersionMismatch Json.Decode.value
                     ]
             , errorDecoder = Json.Decode.string
+            , httpEndpoint = Protocol.httpEndpoint
             }
         }
 

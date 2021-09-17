@@ -4,6 +4,13 @@ import Json.Decode
 import Json.Encode
 
 
+{-| Url path that Client sends MsgFromClient values to
+-}
+httpEndpoint : String
+httpEndpoint =
+    "/api/elm-webapp"
+
+
 {-| All messages that Client can send to Server
 -}
 type MsgFromClient
