@@ -1,1 +1,7 @@
 elm-stuff
+templates/*/build
+templates/*/elm.json
+templates/*/package.json
+templates/*/package-lock.json
+templates/*/public/assets/client.js
+templates/*/src/Webapp

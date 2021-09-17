@@ -9,7 +9,18 @@ build:
 	 ./bin/generate-client-content; \
 	 printf "; return dict[key] }\n") > bin/elm-webapp
 
-generate-all: build
-	rm -rf templates/application; ./bin/elm-webapp application templates/application && make -C templates/application install compile
-	rm -rf templates/document;    ./bin/elm-webapp document templates/document       && make -C templates/document    install compile
-	rm -rf templates/element;     ./bin/elm-webapp element templates/element         && make -C templates/element     install compile
+template-generate-all:
+	make template-clean template-generate GENTYPE=application
+	make template-clean template-generate GENTYPE=document
+	make template-clean template-generate GENTYPE=element
+
+template-clean:
+	rm -rf templates/$(GENTYPE)
+
+template-generate: build
+	./bin/elm-webapp $(GENTYPE) templates/$(GENTYPE)
+	make -C templates/$(GENTYPE) install
+	ln -s ../../../src/Webapp templates/$(GENTYPE)/src/Webapp
+	grep -v choonkeat/elm-webapp templates/$(GENTYPE)/elm.json > templates/$(GENTYPE)/elm.json2
+	mv templates/$(GENTYPE)/elm.json2 templates/$(GENTYPE)/elm.json
+	make -C templates/$(GENTYPE) compile
