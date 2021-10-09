@@ -85,8 +85,13 @@ By default, `elm-webapp` is wired up to communicate with `src/Server.elm` throug
         , protocol =
             { updateFromServer = updateFromServer
             , clientMsgEncoder = Protocol.Auto.encodeProtocolMsgFromClient
-            , serverMsgDecoder = Protocol.Auto.decodeProtocolMsgFromServer
+            , serverMsgDecoder =
+                Json.Decode.oneOf
+                    [ Protocol.Auto.decodeProtocolMsgFromServer
+                    , Json.Decode.map Protocol.ClientServerVersionMismatch Json.Decode.value
+                    ]
             , errorDecoder = Json.Decode.string
+            , httpEndpoint = Protocol.httpEndpoint
             }
         }
 ```
@@ -157,6 +162,7 @@ main =
             , clientMsgDecoder = Protocol.Auto.decodeProtocolMsgFromClient
             , headerDecoder = headerDecoder
             , errorEncoder = Json.Encode.string
+            , httpEndpoint = Protocol.httpEndpoint
             }
         }
 ```
