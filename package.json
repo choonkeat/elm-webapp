@@ -1,6 +1,6 @@
 {
   "bin": {
-    "elm-webapp": "./bin/elm-webapp"
+    "elm-webapp": "./bin/elm-webapp.js"
   },
   "name": "elm-webapp",
   "version": "2.0.0",
@@ -29,5 +29,13 @@
     "url": "https://github.com/choonkeat/elm-webapp/issues"
   },
   "homepage": "https://github.com/choonkeat/elm-webapp#readme",
+  "files": [
+    "templates/*/*.js",
+    "templates/*/Makefile",
+    "templates/*/src",
+    "templates/*/public",
+    "templates/*/*.js",
+    "bin"
+  ],
   "dependencies": {}
 }
