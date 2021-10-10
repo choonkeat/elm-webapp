@@ -28,7 +28,10 @@ function copyRecursively (src, dst, callback) {
     if (err) return callback(err)
     fs.mkdir(dst, function () { // ignore mkdir error; pass to copyFile report
       dirnames.forEach(function (name) {
-        if (name === 'package.json') return // "certain files are always included, regardless of settings" 🤦
+        if (name === 'package.json' || name === 'client.js') {
+          // "certain files are always included, regardless of settings" 🤦
+          return
+        }
         const srcPath = path.join(src, name)
         const dstPath = path.join(dst, name)
         fs.stat(srcPath, function (err, dirent) {
@@ -85,15 +88,14 @@ EXAMPLE:
 if (typeof dirName === 'undefined' || typeof dstName === 'undefined') {
   showUsage()
 } else {
-  process.on('exit', function(code) {
-      console.log(`
+  process.on('exit', function (code) {
+    console.log(`
 Done! Now execute:
 
     1. cd ${dstName}
     2. make install
     3. make
-`);
-
+`)
   })
   copyRecursively(path.join(dirName, 'templates', clientType), dstName, showUsage)
 }

@@ -325,7 +325,7 @@ viewRemote viewSuccess remote =
             p [] [ text "Not asked" ]
 
         RemoteData.Loading ->
-            p [] [ text "Loading" ]
+            p [] [ text "Loading..." ]
 
         RemoteData.Success a ->
             viewSuccess a

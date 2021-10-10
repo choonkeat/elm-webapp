@@ -98,14 +98,22 @@ type Msg
 
 init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init flags url navKey =
-    ( { navKey = navKey
-      , alerts = []
-      , page = Protocol.HomePage
-      , foobarState = Client.FoobarUI.init
-      , greeting = ""
-      , serverGreeting = ""
-      }
-    , Cmd.none
+    let
+        ( model, urlCmd ) =
+            updateFromURL url
+                { navKey = navKey
+                , alerts = []
+                , page = Protocol.HomePage
+                , foobarState = Client.FoobarUI.init
+                , greeting = ""
+                , serverGreeting = ""
+                }
+
+        initCmd =
+            Cmd.none
+    in
+    ( model
+    , Cmd.batch [ urlCmd, initCmd ]
     )
 
 
@@ -185,10 +193,14 @@ update msg model =
             ( model, sendToServer clientMsg )
 
         FoobarMsg subMsg ->
-            Client.FoobarUI.update subMsg model.foobarState
-                |> Tuple.mapBoth
-                    (\foobarState -> { model | foobarState = foobarState })
-                    (Maybe.map (Protocol.MsgFromFoobar >> sendToServer) >> Maybe.withDefault Cmd.none)
+            let
+                ( newFoobarState, maybeFoobarMsg ) =
+                    Client.FoobarUI.update subMsg model.foobarState
+            in
+            ( { model | foobarState = newFoobarState }
+            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
+                |> Maybe.withDefault Cmd.none
+            )
 
         SetGreeting s ->
             ( { model | greeting = s }, Cmd.none )
@@ -256,7 +268,11 @@ updateFromPage model =
             ( model, Cmd.none )
 
         Protocol.FoobarPage subPage ->
-            Client.FoobarUI.updateFromPage subPage model.foobarState
-                |> Tuple.mapBoth
-                    (\foobarState -> { model | foobarState = foobarState })
-                    (Maybe.map (Protocol.MsgFromFoobar >> sendToServer) >> Maybe.withDefault Cmd.none)
+            let
+                ( newFoobarState, maybeFoobarMsg ) =
+                    Client.FoobarUI.updateFromPage subPage model.foobarState
+            in
+            ( { model | foobarState = newFoobarState }
+            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
+                |> Maybe.withDefault Cmd.none
+            )
