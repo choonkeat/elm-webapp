@@ -65,6 +65,14 @@ TYPE:
                                 routing capabilities like "Browser.application"
                                 but more compatible with browser extensions
 
+    This generates a different "src/Server.elm" that comes with "CRUD"
+    operations with an in-memory server state: Data is preserved on the
+    Server only while the Server process is running.
+
+        crud                    generates a standard "Browser.application"
+                                with the ability to list, create, edit, and
+                                destroy "Foobar" records
+
 EXAMPLE:
 
     ${binName} application helloworld
