@@ -3,7 +3,7 @@
     "elm-webapp": "./bin/elm-webapp.js"
   },
   "name": "elm-webapp",
-  "version": "2.0.0",
+  "version": "3.0.0-rc.0",
   "description": "cli to initialize an elm-webapp app",
   "main": "bin/elm-webapp",
   "scripts": {
