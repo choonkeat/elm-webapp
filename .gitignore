@@ -3,5 +3,5 @@ build
 elm.json
 package.json
 package-lock.json
-public/assets/client.js
-src/Webapp
+client.js
+templates/*/src/Webapp
