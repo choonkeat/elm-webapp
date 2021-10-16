@@ -30,11 +30,10 @@
   },
   "homepage": "https://github.com/choonkeat/elm-webapp#readme",
   "files": [
-    "templates/*/*.js",
+    "templates/**/*.js",
     "templates/*/Makefile",
     "templates/*/src",
     "templates/*/public",
-    "templates/*/*.js",
     "bin"
   ],
   "dependencies": {}
