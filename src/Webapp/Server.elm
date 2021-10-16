@@ -25,11 +25,10 @@ import Dict exposing (Dict)
 import Json.Decode
 import Json.Encode
 import Platform exposing (Task)
-import Protocol
 import Task
 import Time
 import Url
-import Webapp.Server.HTTP exposing (Body, Headers, Method, Request, Response, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
+import Webapp.Server.HTTP exposing (Method, Request, Response, StatusCode(..), bodyOf, headersOf, methodOf, pathOf, urlOf)
 import Webapp.Server.Websocket
 
 
