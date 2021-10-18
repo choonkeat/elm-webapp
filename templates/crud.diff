@@ -1,0 +1,653 @@
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Client/FoobarUI.elm templates/crud/src/Client/FoobarUI.elm
+--- templates/crud-0/src/Client/FoobarUI.elm	1970-01-01 07:30:00.000000000 +0730
++++ templates/crud/src/Client/FoobarUI.elm	2021-10-16 09:37:37.000000000 +0800
+@@ -0,0 +1,334 @@
++module Client.FoobarUI exposing
++    ( Model
++    , Msg(..)
++    , init
++    , linkToPage
++    , update
++    , updateFromPage
++    , view
++    )
++
++import Dict exposing (Dict)
++import Extra.Http
++import FormData exposing (FormData)
++import Html exposing (Html, button, div, form, h1, input, label, li, ol, p, small, sup, text, textarea)
++import Html.Attributes exposing (autofocus, class, disabled, href, placeholder, style, type_, value)
++import Html.Events exposing (onBlur, onClick, onInput, onSubmit)
++import Protocol.Foobar exposing (Foobar)
++import RemoteData
++
++
++type alias Model =
++    { page : Protocol.Foobar.Page
++    , foobarForm : RemoteData.WebData (FormData Field Foobar)
++    , foobars : RemoteData.WebData (Dict String Foobar)
++    , foobar : RemoteData.WebData Foobar
++    }
++
++
++init : Model
++init =
++    { page = Protocol.Foobar.ListingPage
++    , foobarForm = RemoteData.NotAsked
++    , foobars = RemoteData.NotAsked
++    , foobar = RemoteData.NotAsked
++    }
++
++
++type Msg
++    = OnInput Field String
++    | OnBlur (Maybe Field)
++    | OnCheck Field Bool
++    | OnSave (Maybe String) Foobar
++    | OnDelete String
++    | FromServer Protocol.Foobar.MsgFromServer
++
++
++update : Msg -> Model -> ( Model, Maybe Protocol.Foobar.MsgFromClient )
++update msg model =
++    case msg of
++        -- FormData standard wiring
++        OnInput k string ->
++            ( { model | foobarForm = RemoteData.map (FormData.onInput k string) model.foobarForm }
++            , Nothing
++            )
++
++        OnBlur k ->
++            ( { model | foobarForm = RemoteData.map (FormData.onVisited k) model.foobarForm }
++            , Nothing
++            )
++
++        OnCheck k bool ->
++            ( { model | foobarForm = RemoteData.map (FormData.onCheck k bool) model.foobarForm }
++            , Nothing
++            )
++
++        -- Our own form submit handling
++        OnSave maybeId foobar ->
++            ( { model
++                | foobar = RemoteData.Loading
++                , foobarForm = RemoteData.map (FormData.onSubmit True) model.foobarForm
++              }
++            , Just (Protocol.Foobar.Save maybeId foobar)
++            )
++
++        OnDelete pk ->
++            ( model, Just (Protocol.Foobar.Delete pk) )
++
++        FromServer serverMsg ->
++            case serverMsg of
++                Protocol.Foobar.Saved ->
++                    ( { model | foobarForm = RemoteData.map (FormData.onSubmit False) model.foobarForm }
++                    , Nothing
++                    )
++
++                Protocol.Foobar.Listed foobars ->
++                    ( { model | foobars = RemoteData.succeed foobars }
++                    , Nothing
++                    )
++
++                Protocol.Foobar.Loaded foobar ->
++                    ( { model
++                        | foobar = RemoteData.succeed foobar
++                        , foobarForm =
++                            RemoteData.succeed
++                                (FormData.init fieldToString
++                                    [ ( Title, foobar.title )
++                                    , ( Body, foobar.body )
++                                    ]
++                                )
++                      }
++                    , Nothing
++                    )
++
++                Protocol.Foobar.Deleted _ ->
++                    ( { model | foobar = RemoteData.NotAsked }
++                    , Nothing
++                    )
++
++
++updateFromPage : Protocol.Foobar.Page -> Model -> ( Model, Maybe Protocol.Foobar.MsgFromClient )
++updateFromPage page model =
++    updateFromPageHelper { model | page = page }
++
++
++updateFromPageHelper : Model -> ( Model, Maybe Protocol.Foobar.MsgFromClient )
++updateFromPageHelper model =
++    case model.page of
++        Protocol.Foobar.ListingPage ->
++            ( { model | foobars = RemoteData.Loading }, Just Protocol.Foobar.Listing )
++
++        Protocol.Foobar.NewPage ->
++            ( { model | foobarForm = RemoteData.succeed (FormData.init fieldToString []) }, Nothing )
++
++        Protocol.Foobar.ShowPage pk ->
++            ( { model | foobar = RemoteData.Loading }, Just (Protocol.Foobar.Load pk) )
++
++        Protocol.Foobar.EditPage pk ->
++            ( { model | foobarForm = RemoteData.Loading, foobar = RemoteData.Loading }, Just (Protocol.Foobar.Load pk) )
++
++
++type Field
++    = Title
++    | Body
++
++
++fieldToString : Field -> String
++fieldToString field =
++    case field of
++        Title ->
++            "Title"
++
++        Body ->
++            "Body"
++
++
++view : Model -> Html Msg
++view model =
++    case model.page of
++        Protocol.Foobar.ListingPage ->
++            div []
++                [ h1 [] [ text "Foobars" ]
++                , viewRemote viewListing model.foobars
++                , linkToPage Protocol.Foobar.NewPage [] [ text "New" ]
++                ]
++
++        Protocol.Foobar.NewPage ->
++            div []
++                [ h1 [] [ text "New" ]
++                , viewRemote (editForm { cancelPage = Protocol.Foobar.ListingPage } Nothing) model.foobarForm
++                ]
++
++        Protocol.Foobar.ShowPage pk ->
++            div []
++                [ h1 [] [ text "Show" ]
++                , viewRemote viewDetail model.foobar
++                , linkToPage Protocol.Foobar.ListingPage [] [ text "Foobars" ]
++                , text " | "
++                , linkToPage (Protocol.Foobar.EditPage pk) [] [ text "Edit" ]
++                ]
++
++        Protocol.Foobar.EditPage pk ->
++            div []
++                [ h1 [] [ text "Edit" ]
++                , viewRemote (editForm { cancelPage = Protocol.Foobar.ShowPage pk } (Just pk)) model.foobarForm
++                , div [ style "float" "right" ] [ button [ onClick (OnDelete pk) ] [ text "Delete" ] ]
++                ]
++
++
++linkToPage : Protocol.Foobar.Page -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
++linkToPage page attrs children =
++    Html.a (href (Protocol.Foobar.pagePath page) :: attrs) children
++
++
++viewListing : Dict String Foobar -> Html Msg
++viewListing foobars =
++    ol []
++        (Dict.foldl (\k v list -> viewRow k v :: list) [] foobars)
++
++
++viewRow : String -> Foobar -> Html Msg
++viewRow id foobar =
++    li []
++        [ linkToPage (Protocol.Foobar.ShowPage id) [] [ text foobar.title ]
++        , linkToPage (Protocol.Foobar.EditPage id) [ style "float" "right" ] [ text "Edit" ]
++        ]
++
++
++viewDetail : Foobar -> Html msg
++viewDetail foobar =
++    div []
++        [ small [] [ text "Title" ]
++        , p [] [ text foobar.title ]
++        , small [] [ text "Body" ]
++        , p [] [ text foobar.body ]
++        ]
++
++
++editForm : { cancelPage : Protocol.Foobar.Page } -> Maybe String -> FormData Field Foobar -> Html Msg
++editForm { cancelPage } maybeId foobarForm =
++    let
++        ( data, errors ) =
++            FormData.parse parseDontValidate foobarForm
++                |> Tuple.mapSecond (FormData.visitedErrors foobarForm)
++
++        ( formAttr, submitButtonAttr, submitButtonLabel ) =
++            case data of
++                FormData.Invalid ->
++                    ( disabled True, disabled True, "Submit" )
++
++                FormData.Valid foobar ->
++                    ( onSubmit (OnSave maybeId foobar), disabled False, "Submit" )
++
++                FormData.Submitting _ ->
++                    ( disabled True, disabled True, "Submitting..." )
++    in
++    form [ formAttr ]
++        [ p []
++            [ label []
++                [ text "Title"
++                , sup [] [ text "*" ]
++                , p []
++                    [ input
++                        [ onInput (OnInput Title)
++                        , onBlur (OnBlur (Just Title))
++                        , value (FormData.value Title foobarForm)
++                        , type_ "text"
++                        , placeholder "Enter title"
++                        , autofocus True
++                        ]
++                        []
++                    , case FormData.errorAt (Just Title) errors of
++                        Just err ->
++                            small [ class "error" ] [ text " ", text err ]
++
++                        Nothing ->
++                            text ""
++                    ]
++                ]
++            , label []
++                [ text "Body"
++                , sup [] [ text "*" ]
++                , p []
++                    [ textarea
++                        [ onInput (OnInput Body)
++                        , onBlur (OnBlur (Just Body))
++                        , value (FormData.value Body foobarForm)
++                        , placeholder "Enter body"
++                        ]
++                        []
++                    , case FormData.errorAt (Just Body) errors of
++                        Just err ->
++                            small [ class "error" ] [ text " ", text err ]
++
++                        Nothing ->
++                            text ""
++                    ]
++                ]
++            , p []
++                [ button [ submitButtonAttr ] [ text submitButtonLabel ]
++                , text " "
++                , linkToPage cancelPage [] [ text "Cancel" ]
++                ]
++            ]
++        ]
++
++
++parseDontValidate : List ( Field, String ) -> ( Maybe Foobar, List ( Maybe Field, String ) )
++parseDontValidate keyValues =
++    let
++        initialState =
++            ( { title = ""
++              , body = ""
++              }
++            , [ ( Just Title, "cannot be blank" )
++              ]
++            )
++
++        ( resultState, resultErrs ) =
++            List.foldl
++                (\( field, value ) ( foobar, errs ) ->
++                    case field of
++                        Title ->
++                            ( { foobar | title = value }
++                            , fieldValidWhen Title (not (String.isEmpty value)) errs
++                            )
++
++                        Body ->
++                            ( { foobar | body = value }
++                            , errs
++                            )
++                )
++                initialState
++                keyValues
++    in
++    if List.isEmpty resultErrs then
++        ( Just resultState, [] )
++
++    else
++        ( Nothing, resultErrs )
++
++
++
++-- LIBS
++
++
++fieldValidWhen : f -> Bool -> List ( Maybe f, a ) -> List ( Maybe f, a )
++fieldValidWhen field valid errors =
++    List.filter (\( maybeField, _ ) -> Just field /= maybeField || not valid) errors
++
++
++viewRemote : (a -> Html msg) -> RemoteData.WebData a -> Html msg
++viewRemote viewSuccess remote =
++    case remote of
++        RemoteData.NotAsked ->
++            p [] [ text "Not asked" ]
++
++        RemoteData.Loading ->
++            p [] [ text "Loading..." ]
++
++        RemoteData.Success a ->
++            viewSuccess a
++
++        RemoteData.Failure err ->
++            p [] [ text (Extra.Http.errorString err) ]
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Client.elm templates/crud/src/Client.elm
+--- templates/crud-0/src/Client.elm	2021-10-16 15:59:28.000000000 +0800
++++ templates/crud/src/Client.elm	2021-10-17 09:45:33.000000000 +0800
+@@ -3,4 +3,5 @@ module Client exposing (..)
+ import Browser
+ import Browser.Navigation
++import Client.FoobarUI
+ import Html exposing (Html, blockquote, button, div, form, h1, input, p, strong, text)
+ import Html.Attributes exposing (href, rel, type_)
+@@ -12,4 +13,5 @@ import Platform exposing (Task)
+ import Protocol
+ import Protocol.Auto
++import Protocol.Foobar
+ import Task
+ import Url
+@@ -80,4 +82,5 @@ type alias Model =
+     , alerts : List Protocol.Alert
+     , page : Protocol.Page
++    , foobarState : Client.FoobarUI.Model
+     , greeting : String
+     , serverGreeting : String
+@@ -90,4 +93,5 @@ type Msg
+     | OnMsgFromServer (Result Http.Error (Result String Protocol.MsgFromServer))
+     | SendMessage Protocol.MsgFromClient
++    | FoobarMsg Client.FoobarUI.Msg
+     | SetGreeting String
+ 
+@@ -101,4 +105,5 @@ init flags url navKey =
+                 , alerts = []
+                 , page = Protocol.HomePage
++                , foobarState = Client.FoobarUI.init
+                 , greeting = ""
+                 , serverGreeting = ""
+@@ -126,4 +131,8 @@ view model =
+                 viewHomepage
+ 
++            Protocol.FoobarPage _ ->
++                Client.FoobarUI.view model.foobarState
++                    |> Html.map FoobarMsg
++
+             Protocol.HomePage ->
+                 viewHomepage
+@@ -138,4 +147,5 @@ viewHomepage =
+             , Html.a [ href "https://github.com/choonkeat/elm-webapp" ] [ text "elm-webapp" ]
+             ]
++        , p [] [ Client.FoobarUI.linkToPage Protocol.Foobar.ListingPage [] [ text "Foobars" ] ]
+         ]
+ 
+@@ -179,4 +189,14 @@ update msg model =
+             updateFromServer serverMsg model
+ 
++        FoobarMsg subMsg ->
++            let
++                ( newFoobarState, maybeFoobarMsg ) =
++                    Client.FoobarUI.update subMsg model.foobarState
++            in
++            ( { model | foobarState = newFoobarState }
++            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
++                |> Maybe.withDefault Cmd.none
++            )
++
+         SendMessage clientMsg ->
+             -- ( model, websocketOut (Json.Encode.encode 0 (Protocol.encodeProtocolMsgFromClient clientMsg)) )
+@@ -199,4 +219,7 @@ updateFromServer serverMsg model =
+             List.foldl overModelAndCmd ( model, Cmd.none ) msglist
+ 
++        Protocol.MsgToFoobar subMsg ->
++            update (FoobarMsg (Client.FoobarUI.FromServer subMsg)) model
++
+         Protocol.ClientServerVersionMismatch _ ->
+             ( { model | alerts = Protocol.clientServerMismatchAlert :: model.alerts }, Cmd.none )
+@@ -242,4 +265,14 @@ updateFromPage model =
+             ( model, Cmd.none )
+ 
++        Protocol.FoobarPage subPage ->
++            let
++                ( newFoobarState, maybeFoobarMsg ) =
++                    Client.FoobarUI.updateFromPage subPage model.foobarState
++            in
++            ( { model | foobarState = newFoobarState }
++            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
++                |> Maybe.withDefault Cmd.none
++            )
++
+         Protocol.HomePage ->
+             ( model, Cmd.none )
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Protocol/Foobar.elm templates/crud/src/Protocol/Foobar.elm
+--- templates/crud-0/src/Protocol/Foobar.elm	1970-01-01 07:30:00.000000000 +0730
++++ templates/crud/src/Protocol/Foobar.elm	2021-10-16 09:37:37.000000000 +0800
+@@ -0,0 +1,64 @@
++module Protocol.Foobar exposing (..)
++
++import Dict exposing (Dict)
++import Url.Builder
++import Url.Parser exposing ((</>))
++
++
++type MsgFromClient
++    = Save (Maybe String) Foobar
++    | Listing
++    | Load String
++    | Delete String
++
++
++type MsgFromServer
++    = Saved
++    | Listed (Dict String Foobar)
++    | Loaded Foobar
++    | Deleted String
++
++
++type alias Foobar =
++    { title : String
++    , body : String
++    }
++
++
++type Page
++    = ListingPage
++    | NewPage
++    | ShowPage String
++    | EditPage String
++
++
++mountPath : List String
++mountPath =
++    [ "foobars" ]
++
++
++pagePath : Page -> String
++pagePath page =
++    case page of
++        ListingPage ->
++            Url.Builder.absolute mountPath []
++
++        NewPage ->
++            Url.Builder.absolute (mountPath ++ [ "New" ]) []
++
++        ShowPage pk ->
++            Url.Builder.absolute (mountPath ++ [ "Show", pk ]) []
++
++        EditPage pk ->
++            Url.Builder.absolute (mountPath ++ [ "Edit", pk ]) []
++
++
++pageRouter : Url.Parser.Parser (Page -> a) a
++pageRouter =
++    List.foldl (Url.Parser.s >> (</>)) Url.Parser.top mountPath
++        </> Url.Parser.oneOf
++                [ Url.Parser.map ListingPage Url.Parser.top
++                , Url.Parser.map NewPage (Url.Parser.s "New")
++                , Url.Parser.map ShowPage (Url.Parser.s "Show" </> Url.Parser.string)
++                , Url.Parser.map EditPage (Url.Parser.s "Edit" </> Url.Parser.string)
++                ]
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Protocol.elm templates/crud/src/Protocol.elm
+--- templates/crud-0/src/Protocol.elm	2021-10-16 15:59:28.000000000 +0800
++++ templates/crud/src/Protocol.elm	2021-10-17 09:43:52.000000000 +0800
+@@ -2,4 +2,5 @@ module Protocol exposing (..)
+ 
+ import Json.Encode
++import Protocol.Foobar
+ import Url.Parser
+ 
+@@ -16,4 +17,5 @@ httpEndpoint =
+ type MsgFromClient
+     = ManyMsgFromClient (List MsgFromClient)
++    | MsgFromFoobar Protocol.Foobar.MsgFromClient
+     | SetGreeting String
+ 
+@@ -24,4 +26,5 @@ type MsgFromServer
+     = ManyMsgFromServer (List MsgFromServer)
+     | ClientServerVersionMismatch Json.Encode.Value
++    | MsgToFoobar Protocol.Foobar.MsgFromServer
+     | ShowAlert Alert
+     | RedirectTo Page
+@@ -55,4 +58,5 @@ type Page
+     = NotFoundPage
+     | HomePage
++    | FoobarPage Protocol.Foobar.Page
+ 
+ 
+@@ -61,4 +65,5 @@ pageRouter =
+     Url.Parser.oneOf
+         [ Url.Parser.map HomePage Url.Parser.top
++        , Url.Parser.map FoobarPage Protocol.Foobar.pageRouter
+         ]
+ 
+@@ -67,4 +72,7 @@ pagePath : Page -> String
+ pagePath page =
+     case page of
++        FoobarPage subPage ->
++            Protocol.Foobar.pagePath subPage
++
+         NotFoundPage ->
+             "/"
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Server/FoobarAPI.elm templates/crud/src/Server/FoobarAPI.elm
+--- templates/crud-0/src/Server/FoobarAPI.elm	1970-01-01 07:30:00.000000000 +0730
++++ templates/crud/src/Server/FoobarAPI.elm	2021-10-16 09:37:37.000000000 +0800
+@@ -0,0 +1,86 @@
++module Server.FoobarAPI exposing (..)
++
++import Dict exposing (Dict)
++import Protocol
++import Protocol.Foobar
++import Task exposing (Task)
++import Time
++
++
++{-| Explicit about the subset of ServerState we're dealing with
++-}
++type alias PartialServerState a =
++    { a
++        | foobars : Dict String Protocol.Foobar.Foobar
++    }
++
++
++{-| TODO:
++
++Current implementation maintain state in memory via `serverState`
++This is useful to speed up development: enabling fast iteration,
++changing the required data
++
++Before releasing the feature, refactor the state management: instead
++of `Task.succeed`, perform actual task to persist state with an
++external db, e.g. Hasura
++
++-}
++updateFromClient : Protocol.RequestContext -> Time.Posix -> Protocol.Foobar.MsgFromClient -> PartialServerState a -> ( PartialServerState a, Task String Protocol.MsgFromServer )
++updateFromClient _ now clientMsg serverState =
++    case clientMsg of
++        Protocol.Foobar.Listing ->
++            ( serverState
++            , Task.succeed (Protocol.MsgToFoobar (Protocol.Foobar.Listed serverState.foobars))
++            )
++
++        Protocol.Foobar.Save maybeId newFoobar ->
++            let
++                newId =
++                    Maybe.withDefault (String.fromInt (Time.posixToMillis now)) maybeId
++            in
++            ( { serverState
++                | foobars =
++                    Dict.insert newId newFoobar serverState.foobars
++              }
++            , Task.succeed
++                (Protocol.ManyMsgFromServer
++                    [ Protocol.ShowAlert (Protocol.Alert "Saved" "Foobar saved successfully!")
++                    , Protocol.RedirectTo (Protocol.FoobarPage (Protocol.Foobar.ShowPage newId))
++                    ]
++                )
++            )
++
++        Protocol.Foobar.Load id ->
++            let
++                maybeFoobar =
++                    Dict.get id serverState.foobars
++            in
++            case maybeFoobar of
++                Just a ->
++                    ( serverState
++                    , Task.succeed (Protocol.MsgToFoobar (Protocol.Foobar.Loaded a))
++                    )
++
++                Nothing ->
++                    ( serverState
++                    , Task.succeed
++                        (Protocol.ManyMsgFromServer
++                            [ Protocol.ShowAlert (Protocol.Alert "Not Found" ("Foobar not found: " ++ id))
++                            , Protocol.RedirectTo (Protocol.FoobarPage Protocol.Foobar.ListingPage)
++                            ]
++                        )
++                    )
++
++        Protocol.Foobar.Delete id ->
++            ( { serverState
++                | foobars =
++                    Dict.remove id serverState.foobars
++              }
++            , Task.succeed
++                (Protocol.ManyMsgFromServer
++                    [ Protocol.ShowAlert (Protocol.Alert "Deleted" "Foobar deleted successfully!")
++                    , Protocol.RedirectTo (Protocol.FoobarPage Protocol.Foobar.ListingPage)
++                    ]
++                )
++            )
+diff -Npar -U 2 --exclude=Auto.elm templates/crud-0/src/Server.elm templates/crud/src/Server.elm
+--- templates/crud-0/src/Server.elm	2021-10-16 15:59:28.000000000 +0800
++++ templates/crud/src/Server.elm	2021-10-17 09:44:23.000000000 +0800
+@@ -7,4 +7,6 @@ import Platform exposing (Task)
+ import Protocol exposing (MsgFromServer)
+ import Protocol.Auto
++import Protocol.Foobar
++import Server.FoobarAPI
+ import Task
+ import Time
+@@ -73,4 +75,5 @@ type alias ServerState =
+     , jsSha : String
+     , assetsHost : String
++    , foobars : Dict String Protocol.Foobar.Foobar
+     }
+ 
+@@ -91,4 +94,5 @@ init flags =
+             , jsSha = Maybe.withDefault "" flags.jsSha
+             , assetsHost = Maybe.withDefault "" flags.assetsHost
++            , foobars = Dict.empty
+             }
+ 
+@@ -182,4 +186,7 @@ updateFromClient : Protocol.RequestConte
+ updateFromClient ctx now clientMsg serverState =
+     case clientMsg of
++        Protocol.MsgFromFoobar m ->
++            Server.FoobarAPI.updateFromClient ctx now m serverState
++
+         Protocol.ManyMsgFromClient msglist ->
+             -- Handling a batched list of `MsgFromClient`

@@ -1,5 +1,6 @@
 {
   "bin": {
+    "elm-webapp-addcrud": "./bin/elm-webapp-addcrud.js",
     "elm-webapp": "./bin/elm-webapp.js"
   },
   "name": "elm-webapp",
@@ -34,6 +35,7 @@
     "templates/*/Makefile",
     "templates/*/src",
     "templates/*/public",
+    "templates/crud.diff",
     "bin"
   ],
   "dependencies": {}
