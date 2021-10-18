@@ -71,11 +71,11 @@ pageRouter =
 pagePath : Page -> String
 pagePath page =
     case page of
+        FoobarPage subPage ->
+            Protocol.Foobar.pagePath subPage
+
         NotFoundPage ->
             "/"
 
         HomePage ->
             "/"
-
-        FoobarPage subPage ->
-            Protocol.Foobar.pagePath subPage

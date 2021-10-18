@@ -185,6 +185,9 @@ updateFromRoute ( method, ctx, route ) now request serverState =
 updateFromClient : Protocol.RequestContext -> Time.Posix -> Protocol.MsgFromClient -> ServerState -> ( ServerState, Task String MsgFromServer )
 updateFromClient ctx now clientMsg serverState =
     case clientMsg of
+        Protocol.MsgFromFoobar m ->
+            Server.FoobarAPI.updateFromClient ctx now m serverState
+
         Protocol.ManyMsgFromClient msglist ->
             -- Handling a batched list of `MsgFromClient`
             let
@@ -194,9 +197,6 @@ updateFromClient ctx now clientMsg serverState =
             in
             List.foldl overStateAndTask ( serverState, [] ) msglist
                 |> Tuple.mapSecond (Task.sequence >> Task.map Protocol.ManyMsgFromServer)
-
-        Protocol.MsgFromFoobar m ->
-            Server.FoobarAPI.updateFromClient ctx now m serverState
 
         Protocol.SetGreeting s ->
             ( { serverState | greeting = s }

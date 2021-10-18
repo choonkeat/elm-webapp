@@ -130,12 +130,12 @@ view model =
             Protocol.NotFoundPage ->
                 viewHomepage
 
-            Protocol.HomePage ->
-                viewHomepage
-
             Protocol.FoobarPage _ ->
                 Client.FoobarUI.view model.foobarState
                     |> Html.map FoobarMsg
+
+            Protocol.HomePage ->
+                viewHomepage
         ]
 
 
@@ -188,10 +188,6 @@ update msg model =
         OnMsgFromServer (Ok (Ok serverMsg)) ->
             updateFromServer serverMsg model
 
-        SendMessage clientMsg ->
-            -- ( model, websocketOut (Json.Encode.encode 0 (Protocol.encodeProtocolMsgFromClient clientMsg)) )
-            ( model, sendToServer clientMsg )
-
         FoobarMsg subMsg ->
             let
                 ( newFoobarState, maybeFoobarMsg ) =
@@ -201,6 +197,10 @@ update msg model =
             , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
                 |> Maybe.withDefault Cmd.none
             )
+
+        SendMessage clientMsg ->
+            -- ( model, websocketOut (Json.Encode.encode 0 (Protocol.encodeProtocolMsgFromClient clientMsg)) )
+            ( model, sendToServer clientMsg )
 
         SetGreeting s ->
             ( { model | greeting = s }, Cmd.none )
@@ -218,6 +218,9 @@ updateFromServer serverMsg model =
             in
             List.foldl overModelAndCmd ( model, Cmd.none ) msglist
 
+        Protocol.MsgToFoobar subMsg ->
+            update (FoobarMsg (Client.FoobarUI.FromServer subMsg)) model
+
         Protocol.ClientServerVersionMismatch _ ->
             ( { model | alerts = Protocol.clientServerMismatchAlert :: model.alerts }, Cmd.none )
 
@@ -226,9 +229,6 @@ updateFromServer serverMsg model =
 
         Protocol.RedirectTo newPage ->
             ( model, Browser.Navigation.pushUrl model.navKey (Protocol.pagePath newPage) )
-
-        Protocol.MsgToFoobar subMsg ->
-            update (FoobarMsg (Client.FoobarUI.FromServer subMsg)) model
 
         Protocol.CurrentGreeting s ->
             ( { model | serverGreeting = s }, Cmd.none )
@@ -264,9 +264,6 @@ updateFromPage model =
         Protocol.NotFoundPage ->
             ( model, Cmd.none )
 
-        Protocol.HomePage ->
-            ( model, Cmd.none )
-
         Protocol.FoobarPage subPage ->
             let
                 ( newFoobarState, maybeFoobarMsg ) =
@@ -276,3 +273,6 @@ updateFromPage model =
             , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
                 |> Maybe.withDefault Cmd.none
             )
+
+        Protocol.HomePage ->
+            ( model, Cmd.none )
