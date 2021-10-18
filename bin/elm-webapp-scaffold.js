@@ -1,13 +1,33 @@
+#!/usr/bin/env node
+
 const fs = require('fs')
 const path = require('path')
 const data = fs.readFileSync(path.join(__dirname, '../templates/crud.diff'), 'utf-8')
 const pflag = 2 // patch -p 2
 const binName = path.basename(process.argv[1])
 const targetName = process.argv[2]
+const dstDirectory = process.argv[3] || '.'
 if (!targetName) {
   console.error(`
 
-Usage: ${binName} <TypeName>
+USAGE:
+
+  ${binName} <TypeName> [target_directory]
+
+TYPENAME:
+
+  Adds a new CRUD application to your existing application
+  generated from "elm-webapp crud"
+
+EXAMPLE:
+
+  ${binName} Article blog
+
+  will generate a CRUD application for "Article" in "./blog"
+
+SEE ALSO:
+
+  elm-webapp
 
     `)
   process.exit(1)
@@ -52,13 +72,13 @@ function functionLineFrom (line) {
 function apply (state) {
   if (!state.functionLine) {
     console.log('creating', state.filepath, '...')
-    fs.mkdirSync(path.dirname(state.filepath), { recursive: true })
-    return fs.writeFileSync(state.filepath, state.body.join('\n'))
+    fs.mkdirSync(path.join(dstDirectory, path.dirname(state.filepath)), { recursive: true })
+    return fs.writeFileSync(path.join(dstDirectory, state.filepath), state.body.join('\n'))
   } else {
     console.log('patching', state.filepath, '...')
-    const originalLines = fs.readFileSync(state.filepath, { encoding: 'utf8' }).split('\n')
+    const originalLines = fs.readFileSync(path.join(dstDirectory, state.filepath), { encoding: 'utf8' }).split('\n')
     const patchedLines = tryPatching(state, originalLines)
-    return fs.writeFileSync(state.filepath, patchedLines.join('\n'))
+    return fs.writeFileSync(path.join(dstDirectory, state.filepath), patchedLines.join('\n'))
   }
 }
 

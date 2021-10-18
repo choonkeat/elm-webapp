@@ -81,6 +81,10 @@ EXAMPLE:
 
     ${binName} application helloworld
 
+SEE ALSO:
+
+    elm-webapp-scaffold
+
     `)
   process.exit(1)
 }

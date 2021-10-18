@@ -1,6 +1,6 @@
 {
   "bin": {
-    "elm-webapp-addcrud": "./bin/elm-webapp-addcrud.js",
+    "elm-webapp-scaffold": "./bin/elm-webapp-scaffold.js",
     "elm-webapp": "./bin/elm-webapp.js"
   },
   "name": "elm-webapp",
