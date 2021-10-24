@@ -205,10 +205,10 @@ function scaffold(targetName, dstDirectory) {
       return fromIndex
     })
     const applyBeforePatch = function() { srcLines.splice(Math.max(...beforeIndexes) + 1, 0, ...state.body); return srcLines };
-    const applyAfterPatch = function() { srcLines.splice(Math.min(...afterIndexes) - 1, 0, ...state.body); return srcLines };
+    const applyAfterPatch = function() { srcLines.splice(Math.min(...afterIndexes), 0, ...state.body); return srcLines };
 
     if (noMismatch(beforeIndexes) && noMismatch(afterIndexes)) {
-      if (Math.min(beforeIndexes) < Math.min(afterIndexes)) return applyBeforePatch();
+      if (Math.min(...beforeIndexes) <= Math.min(...afterIndexes)) return applyBeforePatch();
       return applyAfterPatch(); // if `before` matches are found too far down, we apply `after` match instead
     }
     if (noMismatch(beforeIndexes)) return applyBeforePatch();
@@ -293,8 +293,10 @@ For example:
     ${binName} crud Article mynewspaper
     `);
   }
-  if (! targetName.match(/^[A-Z][a-z]*$/s)) {
+  if (! targetName.match(/^[A-Z][a-zA-Z0-9_]*$/s)) {
     showUsageAndExit1("\nSorry! `" + targetName + "` must be a valid _name_ for an Elm custom type.\n");
+  } else if (targetName.endsWith('s')) {
+    showUsageAndExit1("\nSorry! `" + targetName + "` should be spelt in singular.\n");
   }
   fs.stat(dstDirectory, function(err, stat) {
     if (!err && stat.isDirectory()) {
