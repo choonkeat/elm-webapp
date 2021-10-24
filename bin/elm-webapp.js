@@ -91,7 +91,7 @@ function generateFromTemplate(src, dst, errcallback) {
   return copyRecursively(src, dst, errcallback);
 }
 
-function scaffold(targetName, dstDirectory) {
+function scaffold(targetName, dstDirectory, data) {
   const pflag = parseInt(process.env.SCAFFOLD_PATCH_P || 2, 10) // `-p` flag of `patch`
   const targetTypeName = targetName.substring(0, 1).toUpperCase() + targetName.substring(1)
   const targetVarName = targetName.substring(0, 1).toLowerCase() + targetName.substring(1)
@@ -231,7 +231,6 @@ function scaffold(targetName, dstDirectory) {
   let patches = []
   let state = {}
 
-  const data = fs.readFileSync(process.env.SCAFFOLD_DIFF_FILE || path.join(__dirname, '../templates/crud.diff'), 'utf-8')
   data.split('\n').forEach(function (line) {
     if (line.startsWith('diff ')) {
       if (state.body) patches.push(state)
@@ -298,16 +297,17 @@ For example:
   } else if (targetName.endsWith('s')) {
     showUsageAndExit1("\nSorry! `" + targetName + "` should be spelt in singular.\n");
   }
+  const data = fs.readFileSync(process.env.SCAFFOLD_DIFF_FILE || path.join(__dirname, '../templates/crud.diff'), 'utf-8')
   fs.stat(dstDirectory, function(err, stat) {
     if (!err && stat.isDirectory()) {
-      return scaffold(targetName, dstDirectory) // existing directory, patch into it
+      return scaffold(targetName, dstDirectory, data) // existing directory, patch into it
     }
 
     // otherwise, generate crud THEN patch into it
     generateFromTemplate(path.join(path.dirname(__dirname), 'templates', clientType), dstDirectory, showUsageAndExit1)
     process.on('exit', function (code) {
       if (code === 0) {
-        scaffold(targetName, dstDirectory)
+        scaffold(targetName, dstDirectory, data)
         showDone(dstDirectory)
       }
     })
