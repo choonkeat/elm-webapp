@@ -80,7 +80,7 @@ function apply (state) {
   const fileExist = !!fs.statSync(fullpath, { throwIfNoEntry: false })
 
   if (!state.functionLine) {
-    console.log('creating', state.filepath, '...')
+    console.log('creating', path.join(dstDirectory, state.filepath), '...')
     if (fileExist) {
       console.error(`File already exist: ${state.filepath}
 
@@ -91,7 +91,7 @@ Choose a different TypeName?
     fs.mkdirSync(path.dirname(fullpath), { recursive: true })
     fs.writeFileSync(path.join(dstDirectory, state.filepath), state.body.join('\n'))
   } else {
-    console.log('patching', state.filepath, '...')
+    console.log('patching', path.join(dstDirectory, state.filepath), '...')
     const originalLines = fs.readFileSync(path.join(dstDirectory, state.filepath), { encoding: 'utf8' }).split('\n')
     const patchedLines = tryPatching(state, originalLines)
     return fs.writeFileSync(path.join(dstDirectory, state.filepath), patchedLines.join('\n'))
@@ -131,29 +131,35 @@ function errorStateExit (state) {
   errorExit('Patch failed!')
 }
 
+function noMismatch(array) {
+  return array.indexOf(-1) === -1
+}
+
 function tryPatching (state, srcLines) {
   let fromIndex = srcLines.findIndex(function (line, index) { return line.startsWith(state.functionLine) })
-  if (fromIndex === -1) errorStateExit(state)
+  if (fromIndex === -1) errorStateExit(state) // if we cannot find the patch target function, error
 
+  // find lines in src that matches state.before
   const beforeIndexes = state.before.map(function (line) {
     fromIndex = srcLines.indexOf(line, fromIndex)
     return fromIndex
   })
-  if (beforeIndexes.indexOf(-1) === -1) {
-    srcLines.splice(Math.max(...beforeIndexes) + 1, 0, ...state.body)
-    return srcLines
-  }
-
+  // find lines in src that matches state.after
   const afterIndexes = state.after.map(function (line) {
     fromIndex = srcLines.indexOf(line, fromIndex)
     return fromIndex
   })
-  if (afterIndexes.indexOf(-1) === -1) {
-    srcLines.splice(Math.min(...beforeIndexes) - 1, 0, ...state.body)
-    return srcLines
-  }
+  const applyBeforePatch = function() { srcLines.splice(Math.max(...beforeIndexes) + 1, 0, ...state.body); return srcLines };
+  const applyAfterPatch = function() { srcLines.splice(Math.min(...afterIndexes) - 1, 0, ...state.body); return srcLines };
 
-  // cannot locate insertion point by either before nor after
+  if (noMismatch(beforeIndexes) && noMismatch(afterIndexes)) {
+    if (Math.min(beforeIndexes) < Math.min(afterIndexes)) return applyBeforePatch();
+    return applyAfterPatch(); // if `before` matches are found too far down, we apply `after` match instead
+  }
+  if (noMismatch(beforeIndexes)) return applyBeforePatch();
+  if (noMismatch(afterIndexes)) return applyAfterPatch();
+
+  // cannot locate insertion point by either `before` nor `after`
   errorStateExit(state)
 }
 
