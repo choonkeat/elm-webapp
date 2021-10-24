@@ -42,14 +42,57 @@ hello-app
 1 directory, 5 files
 ```
 
-The above command generates a  `Client` of [Browser.element](https://package.elm-lang.org/packages/elm/browser/latest/Browser#element). To generate a [Browser.document](https://package.elm-lang.org/packages/elm/browser/latest/Browser#document) or [Browser.application](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) instead, use either commands
+The above command generates a barebones `Client` of [Browser.element](https://package.elm-lang.org/packages/elm/browser/latest/Browser#element).
+
+### npx elm-webapp
+
+To generate a [Browser.document](https://package.elm-lang.org/packages/elm/browser/latest/Browser#document), [Browser.application](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) or even a full fledged CRUD applications, run the cli without arguments `npx elm-webapp`:
 
 ```
-npx elm-webapp document hello-app
-npx elm-webapp application hello-app
+USAGE:
+
+    elm-webapp <type> <target_directory>
+
+TYPE:
+
+    While the generated "src/Server.elm" is the same, you can choose
+    what kind of "src/Client.elm" to generate:
+
+        application             generates a standard "Browser.application"
+
+        document                generates a standard "Browser.document"
+
+        element                 generates a standard "Browser.element"
+
+        application-element     generates a standard "Browser.element" with
+                                routing capabilities like "Browser.application"
+                                but more compatible with browser extensions
+
+    This generates a different "src/Server.elm" that comes with "CRUD"
+    operations with an in-memory server state: Data is preserved on the
+    Server only while the Server process is running.
+
+        crud <TypeName>         patch the <target_directory> with the ability
+                                to list, create, edit, and destroy "TypeName"
+                                records
+
+EXAMPLES:
+
+    elm-webapp application helloworld
+
+    elm-webapp document helloworld
+
+    elm-webapp element helloworld
+
+    elm-webapp application-element helloworld
+
+    elm-webapp crud Post blog
+
 ```
 
-While app developers only get involved in the cyan boxes on the extreme left and right, here's a rough overview of how the pieces are put together end-to-end:
+### Advanced overview
+
+While app developers only need to work inside the cyan boxes on the extreme left and right, here's a rough overview of how the pieces are put together end-to-end:
 
 [![](https://mermaid.ink/img/eyJjb2RlIjoic2VxdWVuY2VEaWFncmFtXG4gICAgXG4gICAgcmVjdCByZ2JhKDE3MywgMjU1LCAyNDUsIDEpXG4gICAgbm90ZSByaWdodCBvZiBDbGllbnQuZWxtOiB0eXBlIE1zZ0Zyb21DbGllbnQgPSBIZWxsbyAoTWF5YmUgU3RyaW5nKVxuICAgIENsaWVudC5lbG0tPj5XZWJhcHAuQ2xpZW50OiBzZW5kVG9TZXJ2ZXIgKEhlbGxvIChKdXN0IFwiQWxpY2VcIikpIDogQ21kIG1zZ1xuICAgIGVuZFxuICAgIFdlYmFwcC5DbGllbnQtPj5XZWJhcHAuQ2xpZW50OiBjbGllbnRNc2dFbmNvZGVyXG4gICAgV2ViYXBwLkNsaWVudC0-PmVsbS9odHRwOiBIdHRwLnRhc2tcbiAgICBlbG0vaHR0cC0tPj5pbmRleC5qczogXG4gICAgaW5kZXguanMgLT4-IFdlYmFwcC5TZXJ2ZXI6IHBvcnQgb25IdHRwUmVxdWVzdFxuICAgIFdlYmFwcC5TZXJ2ZXIgLT4-IFdlYmFwcC5TZXJ2ZXI6IGNsaWVudE1zZ0RlY29kZXI8YnI-aGVhZGVyRGVjb2RlclxuICAgIHJlY3QgcmdiYSgxNzMsIDI1NSwgMjQ1LCAxKVxuICAgIFdlYmFwcC5TZXJ2ZXItPj4rU2VydmVyLmVsbTogIHVwZGF0ZUZyb21DbGllbnQgPTxicj5jYXNlIGNsaWVudE1zZyBvZi4uLlxuICAgIFNlcnZlci5lbG0tPj4tV2ViYXBwLlNlcnZlcjogVGFzay5zdWNjZWVkIChHcmVldCBcIkhpLCBBbGljZVwiKVxuICAgIG5vdGUgbGVmdCBvZiBTZXJ2ZXIuZWxtOiB0eXBlIE1zZ0Zyb21TZXJ2ZXIgPSBHcmVldCBTdHJpbmdcbiAgICBlbmRcbiAgICBXZWJhcHAuU2VydmVyIC0-PiBXZWJhcHAuU2VydmVyOiBzZXJ2ZXJNc2dFbmNvZGVyXG4gICAgV2ViYXBwLlNlcnZlciAtPj4gaW5kZXguanM6IHBvcnQgb25IdHRwUmVzcG9uc2VcbiAgICBpbmRleC5qcyAtLT4-IGVsbS9odHRwOiBcbiAgICBlbG0vaHR0cCAtPj4gV2ViYXBwLkNsaWVudDogSHR0cC5yZXNvbHZlclxuICAgIFdlYmFwcC5DbGllbnQgLT4-IFdlYmFwcC5DbGllbnQ6IHNlcnZlck1zZ0RlY29kZXJcbiAgICByZWN0IHJnYmEoMTczLCAyNTUsIDI0NSwgMSlcbiAgICBXZWJhcHAuQ2xpZW50IC0-PiBDbGllbnQuZWxtOiB1cGRhdGVGcm9tU2VydmVyID08YnI-Y2FzZSBzZXJ2ZXJNc2cgb2YgLi4uXG4gICAgZW5kXG4iLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9LCJ1cGRhdGVFZGl0b3IiOmZhbHNlLCJhdXRvU3luYyI6dHJ1ZSwidXBkYXRlRGlhZ3JhbSI6ZmFsc2V9)](https://mermaid-js.github.io/mermaid-live-editor/edit/#eyJjb2RlIjoic2VxdWVuY2VEaWFncmFtXG4gICAgXG4gICAgcmVjdCByZ2JhKDE3MywgMjU1LCAyNDUsIDEpXG4gICAgbm90ZSByaWdodCBvZiBDbGllbnQuZWxtOiB0eXBlIE1zZ0Zyb21DbGllbnQgPSBIZWxsbyAoTWF5YmUgU3RyaW5nKVxuICAgIENsaWVudC5lbG0tPj5XZWJhcHAuQ2xpZW50OiBzZW5kVG9TZXJ2ZXIgKEhlbGxvIChKdXN0IFwiQWxpY2VcIikpIDogQ21kIG1zZ1xuICAgIGVuZFxuICAgIFdlYmFwcC5DbGllbnQtPj5XZWJhcHAuQ2xpZW50OiBjbGllbnRNc2dFbmNvZGVyXG4gICAgV2ViYXBwLkNsaWVudC0-PmVsbS9odHRwOiBIdHRwLnRhc2tcbiAgICBlbG0vaHR0cC0tPj5pbmRleC5qczogXG4gICAgaW5kZXguanMgLT4-IFdlYmFwcC5TZXJ2ZXI6IHBvcnQgb25IdHRwUmVxdWVzdFxuICAgIFdlYmFwcC5TZXJ2ZXIgLT4-IFdlYmFwcC5TZXJ2ZXI6IGNsaWVudE1zZ0RlY29kZXI8YnI-aGVhZGVyRGVjb2RlclxuICAgIHJlY3QgcmdiYSgxNzMsIDI1NSwgMjQ1LCAxKVxuICAgIFdlYmFwcC5TZXJ2ZXItPj4rU2VydmVyLmVsbTogIHVwZGF0ZUZyb21DbGllbnQgPTxicj5jYXNlIGNsaWVudE1zZyBvZi4uLlxuICAgIFNlcnZlci5lbG0tPj4tV2ViYXBwLlNlcnZlcjogVGFzay5zdWNjZWVkIChHcmVldCBcIkhpLCBBbGljZVwiKVxuICAgIG5vdGUgbGVmdCBvZiBTZXJ2ZXIuZWxtOiB0eXBlIE1zZ0Zyb21TZXJ2ZXIgPSBHcmVldCBTdHJpbmdcbiAgICBlbmRcbiAgICBXZWJhcHAuU2VydmVyIC0-PiBXZWJhcHAuU2VydmVyOiBzZXJ2ZXJNc2dFbmNvZGVyXG4gICAgV2ViYXBwLlNlcnZlciAtPj4gaW5kZXguanM6IHBvcnQgb25IdHRwUmVzcG9uc2VcbiAgICBpbmRleC5qcyAtLT4-IGVsbS9odHRwOiBcbiAgICBlbG0vaHR0cCAtPj4gV2ViYXBwLkNsaWVudDogSHR0cC5yZXNvbHZlclxuICAgIFdlYmFwcC5DbGllbnQgLT4-IFdlYmFwcC5DbGllbnQ6IHNlcnZlck1zZ0RlY29kZXJcbiAgICByZWN0IHJnYmEoMTczLCAyNTUsIDI0NSwgMSlcbiAgICBXZWJhcHAuQ2xpZW50IC0-PiBDbGllbnQuZWxtOiB1cGRhdGVGcm9tU2VydmVyID08YnI-Y2FzZSBzZXJ2ZXJNc2cgb2YgLi4uXG4gICAgZW5kXG4iLCJtZXJtYWlkIjoie1xuICBcInRoZW1lXCI6IFwiZGVmYXVsdFwiXG59IiwidXBkYXRlRWRpdG9yIjpmYWxzZSwiYXV0b1N5bmMiOnRydWUsInVwZGF0ZURpYWdyYW0iOmZhbHNlfQ)
 
