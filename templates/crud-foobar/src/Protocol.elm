@@ -1,6 +1,7 @@
 module Protocol exposing (..)
 
 import Json.Encode
+import Protocol.Foobar
 import Url.Parser
 
 
@@ -15,6 +16,7 @@ httpEndpoint =
 -}
 type MsgFromClient
     = ManyMsgFromClient (List MsgFromClient)
+    | MsgFromFoobar Protocol.Foobar.MsgFromClient
     | SetGreeting String
 
 
@@ -23,6 +25,7 @@ type MsgFromClient
 type MsgFromServer
     = ManyMsgFromServer (List MsgFromServer)
     | ClientServerVersionMismatch Json.Encode.Value
+    | MsgToFoobar Protocol.Foobar.MsgFromServer
     | ShowAlert Alert
     | RedirectTo Page
     | CurrentGreeting String
@@ -54,18 +57,23 @@ clientServerMismatchAlert =
 type Page
     = NotFoundPage
     | HomePage
+    | FoobarPage Protocol.Foobar.Page
 
 
 pageRouter : Url.Parser.Parser (Page -> a) a
 pageRouter =
     Url.Parser.oneOf
         [ Url.Parser.map HomePage Url.Parser.top
+        , Url.Parser.map FoobarPage Protocol.Foobar.pageRouter
         ]
 
 
 pagePath : Page -> String
 pagePath page =
     case page of
+        FoobarPage subPage ->
+            Protocol.Foobar.pagePath subPage
+
         NotFoundPage ->
             "/"
 

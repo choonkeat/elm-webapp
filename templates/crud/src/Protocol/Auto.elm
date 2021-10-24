@@ -11,8 +11,6 @@ import Extra.Codec exposing (..)
 import Json.Decode
 import Json.Encode
 import Platform
-import Protocol.Foobar
-import Protocol.Foobar.Auto exposing (..)
 import Set
 import Url.Parser
 
@@ -237,36 +235,33 @@ encodeProtocolAlert value =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromFoobar") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.MsgFromClient") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
 encodeProtocolMsgFromClient : Protocol.MsgFromClient -> Json.Encode.Value
 encodeProtocolMsgFromClient value =
     case value of
         (Protocol.ManyMsgFromClient m0) -> (Json.Encode.list identity [ encodeString "Protocol.ManyMsgFromClient", (encodeList (encodeProtocolMsgFromClient) m0) ])
-        (Protocol.MsgFromFoobar m0) -> (Json.Encode.list identity [ encodeString "Protocol.MsgFromFoobar", (encodeProtocolFoobarMsgFromClient m0) ])
         (Protocol.SetGreeting m0) -> (Json.Encode.list identity [ encodeString "Protocol.SetGreeting", (encodeString m0) ])
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ClientServerVersionMismatch") [CustomTypeConstructor (TitleCaseDotPhrase "Json.Encode.Value") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgToFoobar") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.MsgFromServer") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ShowAlert") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Alert") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.RedirectTo") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Page") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ClientServerVersionMismatch") [CustomTypeConstructor (TitleCaseDotPhrase "Json.Encode.Value") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ShowAlert") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Alert") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.RedirectTo") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Page") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
 encodeProtocolMsgFromServer : Protocol.MsgFromServer -> Json.Encode.Value
 encodeProtocolMsgFromServer value =
     case value of
         (Protocol.ManyMsgFromServer m0) -> (Json.Encode.list identity [ encodeString "Protocol.ManyMsgFromServer", (encodeList (encodeProtocolMsgFromServer) m0) ])
         (Protocol.ClientServerVersionMismatch m0) -> (Json.Encode.list identity [ encodeString "Protocol.ClientServerVersionMismatch", (encodeJsonEncodeValue m0) ])
-        (Protocol.MsgToFoobar m0) -> (Json.Encode.list identity [ encodeString "Protocol.MsgToFoobar", (encodeProtocolFoobarMsgFromServer m0) ])
         (Protocol.ShowAlert m0) -> (Json.Encode.list identity [ encodeString "Protocol.ShowAlert", (encodeProtocolAlert m0) ])
         (Protocol.RedirectTo m0) -> (Json.Encode.list identity [ encodeString "Protocol.RedirectTo", (encodeProtocolPage m0) ])
         (Protocol.CurrentGreeting m0) -> (Json.Encode.list identity [ encodeString "Protocol.CurrentGreeting", (encodeString m0) ])
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.NotFoundPage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.HomePage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.FoobarPage") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.Page") []]], name = TypeName "Protocol.Page" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.NotFoundPage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.HomePage") []], name = TypeName "Protocol.Page" [] } -}
 encodeProtocolPage : Protocol.Page -> Json.Encode.Value
 encodeProtocolPage value =
     case value of
         (Protocol.NotFoundPage) -> (Json.Encode.list identity [ encodeString "Protocol.NotFoundPage" ])
         (Protocol.HomePage) -> (Json.Encode.list identity [ encodeString "Protocol.HomePage" ])
-        (Protocol.FoobarPage m0) -> (Json.Encode.list identity [ encodeString "Protocol.FoobarPage", (encodeProtocolFoobarPage m0) ])
 
 
 
@@ -286,7 +281,7 @@ decodeProtocolAlert  =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromFoobar") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.MsgFromClient") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromClient") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromClient") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.SetGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromClient" [] } -}
 decodeProtocolMsgFromClient : Json.Decode.Decoder (Protocol.MsgFromClient)
 decodeProtocolMsgFromClient  =
     Json.Decode.index 0 Json.Decode.string
@@ -294,7 +289,6 @@ decodeProtocolMsgFromClient  =
             (\word ->
                 case word of
                     "Protocol.ManyMsgFromClient" -> (Json.Decode.succeed Protocol.ManyMsgFromClient |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeList (decodeProtocolMsgFromClient)))))
-                    "Protocol.MsgFromFoobar" -> (Json.Decode.succeed Protocol.MsgFromFoobar |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeProtocolFoobarMsgFromClient))))
                     "Protocol.SetGreeting" -> (Json.Decode.succeed Protocol.SetGreeting |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeString))))
                     _ -> Json.Decode.fail ("Unexpected Protocol.MsgFromClient: " ++ word)
             )
@@ -302,7 +296,7 @@ decodeProtocolMsgFromClient  =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ClientServerVersionMismatch") [CustomTypeConstructor (TitleCaseDotPhrase "Json.Encode.Value") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgToFoobar") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.MsgFromServer") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ShowAlert") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Alert") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.RedirectTo") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Page") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ManyMsgFromServer") [CustomTypeConstructor (TitleCaseDotPhrase "List") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.MsgFromServer") []]],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ClientServerVersionMismatch") [CustomTypeConstructor (TitleCaseDotPhrase "Json.Encode.Value") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.ShowAlert") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Alert") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.RedirectTo") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Page") []],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.CurrentGreeting") [CustomTypeConstructor (TitleCaseDotPhrase "String") []]], name = TypeName "Protocol.MsgFromServer" [] } -}
 decodeProtocolMsgFromServer : Json.Decode.Decoder (Protocol.MsgFromServer)
 decodeProtocolMsgFromServer  =
     Json.Decode.index 0 Json.Decode.string
@@ -311,7 +305,6 @@ decodeProtocolMsgFromServer  =
                 case word of
                     "Protocol.ManyMsgFromServer" -> (Json.Decode.succeed Protocol.ManyMsgFromServer |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeList (decodeProtocolMsgFromServer)))))
                     "Protocol.ClientServerVersionMismatch" -> (Json.Decode.succeed Protocol.ClientServerVersionMismatch |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeJsonEncodeValue))))
-                    "Protocol.MsgToFoobar" -> (Json.Decode.succeed Protocol.MsgToFoobar |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeProtocolFoobarMsgFromServer))))
                     "Protocol.ShowAlert" -> (Json.Decode.succeed Protocol.ShowAlert |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeProtocolAlert))))
                     "Protocol.RedirectTo" -> (Json.Decode.succeed Protocol.RedirectTo |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeProtocolPage))))
                     "Protocol.CurrentGreeting" -> (Json.Decode.succeed Protocol.CurrentGreeting |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeString))))
@@ -321,7 +314,7 @@ decodeProtocolMsgFromServer  =
 
 
 
-{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.NotFoundPage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.HomePage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.FoobarPage") [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.Foobar.Page") []]], name = TypeName "Protocol.Page" [] } -}
+{-| CustomTypeDef { constructors = [CustomTypeConstructor (TitleCaseDotPhrase "Protocol.NotFoundPage") [],CustomTypeConstructor (TitleCaseDotPhrase "Protocol.HomePage") []], name = TypeName "Protocol.Page" [] } -}
 decodeProtocolPage : Json.Decode.Decoder (Protocol.Page)
 decodeProtocolPage  =
     Json.Decode.index 0 Json.Decode.string
@@ -330,7 +323,6 @@ decodeProtocolPage  =
                 case word of
                     "Protocol.NotFoundPage" -> (Json.Decode.succeed Protocol.NotFoundPage)
                     "Protocol.HomePage" -> (Json.Decode.succeed Protocol.HomePage)
-                    "Protocol.FoobarPage" -> (Json.Decode.succeed Protocol.FoobarPage |> (Json.Decode.map2 (|>) (Json.Decode.index 1 (decodeProtocolFoobarPage))))
                     _ -> Json.Decode.fail ("Unexpected Protocol.Page: " ++ word)
             )
                  

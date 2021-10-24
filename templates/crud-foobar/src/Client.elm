@@ -2,6 +2,7 @@ module Client exposing (..)
 
 import Browser
 import Browser.Navigation
+import Client.FoobarUI
 import Html exposing (Html, blockquote, button, div, form, h1, input, p, strong, text)
 import Html.Attributes exposing (href, rel, type_)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -11,6 +12,7 @@ import Json.Encode
 import Platform exposing (Task)
 import Protocol
 import Protocol.Auto
+import Protocol.Foobar
 import Task
 import Url
 import Url.Parser
@@ -79,6 +81,7 @@ type alias Model =
     { navKey : Browser.Navigation.Key
     , alerts : List Protocol.Alert
     , page : Protocol.Page
+    , foobarState : Client.FoobarUI.Model
     , greeting : String
     , serverGreeting : String
     }
@@ -89,6 +92,7 @@ type Msg
     | OnUrlChange Url.Url
     | OnMsgFromServer (Result Http.Error (Result String Protocol.MsgFromServer))
     | SendMessage Protocol.MsgFromClient
+    | FoobarMsg Client.FoobarUI.Msg
     | SetGreeting String
 
 
@@ -100,6 +104,7 @@ init flags url navKey =
                 { navKey = navKey
                 , alerts = []
                 , page = Protocol.HomePage
+                , foobarState = Client.FoobarUI.init
                 , greeting = ""
                 , serverGreeting = ""
                 }
@@ -125,6 +130,10 @@ view model =
             Protocol.NotFoundPage ->
                 viewHomepage
 
+            Protocol.FoobarPage _ ->
+                Client.FoobarUI.view model.foobarState
+                    |> Html.map FoobarMsg
+
             Protocol.HomePage ->
                 viewHomepage
         ]
@@ -137,6 +146,7 @@ viewHomepage =
             [ text "Welcome to "
             , Html.a [ href "https://github.com/choonkeat/elm-webapp" ] [ text "elm-webapp" ]
             ]
+        , p [] [ Client.FoobarUI.linkToPage Protocol.Foobar.ListingPage [] [ text "Foobars" ] ]
         ]
 
 
@@ -178,6 +188,16 @@ update msg model =
         OnMsgFromServer (Ok (Ok serverMsg)) ->
             updateFromServer serverMsg model
 
+        FoobarMsg subMsg ->
+            let
+                ( newFoobarState, maybeFoobarMsg ) =
+                    Client.FoobarUI.update subMsg model.foobarState
+            in
+            ( { model | foobarState = newFoobarState }
+            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
+                |> Maybe.withDefault Cmd.none
+            )
+
         SendMessage clientMsg ->
             -- ( model, websocketOut (Json.Encode.encode 0 (Protocol.encodeProtocolMsgFromClient clientMsg)) )
             ( model, sendToServer clientMsg )
@@ -197,6 +217,9 @@ updateFromServer serverMsg model =
                         |> Tuple.mapSecond (\nextCmd -> Cmd.batch [ nextCmd, currentCmd ])
             in
             List.foldl overModelAndCmd ( model, Cmd.none ) msglist
+
+        Protocol.MsgToFoobar subMsg ->
+            update (FoobarMsg (Client.FoobarUI.FromServer subMsg)) model
 
         Protocol.ClientServerVersionMismatch _ ->
             ( { model | alerts = Protocol.clientServerMismatchAlert :: model.alerts }, Cmd.none )
@@ -240,6 +263,16 @@ updateFromPage model =
     case model.page of
         Protocol.NotFoundPage ->
             ( model, Cmd.none )
+
+        Protocol.FoobarPage subPage ->
+            let
+                ( newFoobarState, maybeFoobarMsg ) =
+                    Client.FoobarUI.updateFromPage subPage model.foobarState
+            in
+            ( { model | foobarState = newFoobarState }
+            , Maybe.map (Protocol.MsgFromFoobar >> sendToServer) maybeFoobarMsg
+                |> Maybe.withDefault Cmd.none
+            )
 
         Protocol.HomePage ->
             ( model, Cmd.none )

@@ -6,6 +6,8 @@ import Json.Encode
 import Platform exposing (Task)
 import Protocol exposing (MsgFromServer)
 import Protocol.Auto
+import Protocol.Foobar
+import Server.FoobarAPI
 import Task
 import Time
 import Url
@@ -72,6 +74,7 @@ type alias ServerState =
     { greeting : String
     , jsSha : String
     , assetsHost : String
+    , foobars : Dict String Protocol.Foobar.Foobar
     }
 
 
@@ -90,6 +93,7 @@ init flags =
             { greeting = "Hello world"
             , jsSha = Maybe.withDefault "" flags.jsSha
             , assetsHost = Maybe.withDefault "" flags.assetsHost
+            , foobars = Dict.empty
             }
 
         cmd =
@@ -181,6 +185,9 @@ updateFromRoute ( method, ctx, route ) now request serverState =
 updateFromClient : Protocol.RequestContext -> Time.Posix -> Protocol.MsgFromClient -> ServerState -> ( ServerState, Task String MsgFromServer )
 updateFromClient ctx now clientMsg serverState =
     case clientMsg of
+        Protocol.MsgFromFoobar m ->
+            Server.FoobarAPI.updateFromClient ctx now m serverState
+
         Protocol.ManyMsgFromClient msglist ->
             -- Handling a batched list of `MsgFromClient`
             let
