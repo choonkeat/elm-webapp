@@ -6,7 +6,6 @@ const binName = path.basename(process.argv[1])
 
 function showUsageAndExit1 (extraMessage) {
   console.error(extraMessage || `
-
 USAGE:
 
     ${binName} <type> <target_directory>
@@ -284,7 +283,15 @@ if (typeof clientType === 'undefined') {
   const targetName = process.argv[3]
   const dstDirectory = process.argv[4]
   if (typeof dstDirectory === 'undefined') {
-    showUsageAndExit1("\nSorry! You are missing `target_directory` in your commandline: " + binName + " crud " + targetName + " <target_directory>\n");
+    showUsageAndExit1(`
+Sorry! You are missing some arguments in your commandline:
+
+    ${binName} crud <TypeName> <target_directory>
+
+For example:
+
+    ${binName} crud Article mynewspaper
+    `);
   }
   if (! targetName.match(/^[A-Z][a-z]*$/s)) {
     showUsageAndExit1("\nSorry! `" + targetName + "` must be a valid _name_ for an Elm custom type.\n");
