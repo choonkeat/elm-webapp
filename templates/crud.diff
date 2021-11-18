@@ -1,6 +1,6 @@
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Client/FoobarUI.elm templates/crud-foobar/src/Client/FoobarUI.elm
 --- templates/crud/src/Client/FoobarUI.elm	1970-01-01 07:30:00.000000000 +0730
-+++ templates/crud-foobar/src/Client/FoobarUI.elm	2021-10-16 09:37:37.000000000 +0800
++++ templates/crud-foobar/src/Client/FoobarUI.elm	2021-10-24 12:27:23.000000000 +0800
 @@ -0,0 +1,334 @@
 +module Client.FoobarUI exposing
 +    ( Model
@@ -337,8 +337,8 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Client/FoobarUI.elm templa
 +        RemoteData.Failure err ->
 +            p [] [ text (Extra.Http.errorString err) ]
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Client.elm templates/crud-foobar/src/Client.elm
---- templates/crud/src/Client.elm	2021-10-16 15:59:28.000000000 +0800
-+++ templates/crud-foobar/src/Client.elm	2021-10-17 09:45:33.000000000 +0800
+--- templates/crud/src/Client.elm	2021-10-24 12:27:23.000000000 +0800
++++ templates/crud-foobar/src/Client.elm	2021-10-24 12:27:23.000000000 +0800
 @@ -3,4 +3,5 @@ module Client exposing (..)
  import Browser
  import Browser.Navigation
@@ -424,7 +424,7 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Client.elm templates/crud-
              ( model, Cmd.none )
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Protocol/Foobar.elm templates/crud-foobar/src/Protocol/Foobar.elm
 --- templates/crud/src/Protocol/Foobar.elm	1970-01-01 07:30:00.000000000 +0730
-+++ templates/crud-foobar/src/Protocol/Foobar.elm	2021-10-16 09:37:37.000000000 +0800
++++ templates/crud-foobar/src/Protocol/Foobar.elm	2021-11-18 14:23:16.000000000 +0800
 @@ -0,0 +1,64 @@
 +module Protocol.Foobar exposing (..)
 +
@@ -483,7 +483,7 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Protocol/Foobar.elm templa
 +
 +pageRouter : Url.Parser.Parser (Page -> a) a
 +pageRouter =
-+    List.foldl (Url.Parser.s >> (</>)) Url.Parser.top mountPath
++    List.foldr (Url.Parser.s >> (</>)) Url.Parser.top mountPath
 +        </> Url.Parser.oneOf
 +                [ Url.Parser.map ListingPage Url.Parser.top
 +                , Url.Parser.map NewPage (Url.Parser.s "New")
@@ -491,8 +491,8 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Protocol/Foobar.elm templa
 +                , Url.Parser.map EditPage (Url.Parser.s "Edit" </> Url.Parser.string)
 +                ]
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Protocol.elm templates/crud-foobar/src/Protocol.elm
---- templates/crud/src/Protocol.elm	2021-10-16 15:59:28.000000000 +0800
-+++ templates/crud-foobar/src/Protocol.elm	2021-10-17 09:43:52.000000000 +0800
+--- templates/crud/src/Protocol.elm	2021-10-24 12:27:23.000000000 +0800
++++ templates/crud-foobar/src/Protocol.elm	2021-10-24 12:27:23.000000000 +0800
 @@ -2,4 +2,5 @@ module Protocol exposing (..)
  
  import Json.Encode
@@ -533,7 +533,7 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Protocol.elm templates/cru
              "/"
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Server/FoobarAPI.elm templates/crud-foobar/src/Server/FoobarAPI.elm
 --- templates/crud/src/Server/FoobarAPI.elm	1970-01-01 07:30:00.000000000 +0730
-+++ templates/crud-foobar/src/Server/FoobarAPI.elm	2021-10-16 09:37:37.000000000 +0800
++++ templates/crud-foobar/src/Server/FoobarAPI.elm	2021-10-24 12:27:23.000000000 +0800
 @@ -0,0 +1,86 @@
 +module Server.FoobarAPI exposing (..)
 +
@@ -622,8 +622,8 @@ diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Server/FoobarAPI.elm templ
 +                )
 +            )
 diff -Npar -U 2 --exclude=Auto.elm templates/crud/src/Server.elm templates/crud-foobar/src/Server.elm
---- templates/crud/src/Server.elm	2021-10-16 15:59:28.000000000 +0800
-+++ templates/crud-foobar/src/Server.elm	2021-10-17 09:44:23.000000000 +0800
+--- templates/crud/src/Server.elm	2021-10-24 12:27:23.000000000 +0800
++++ templates/crud-foobar/src/Server.elm	2021-10-24 12:27:23.000000000 +0800
 @@ -7,4 +7,6 @@ import Platform exposing (Task)
  import Protocol exposing (MsgFromServer)
  import Protocol.Auto

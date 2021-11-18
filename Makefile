@@ -6,5 +6,5 @@ prerelease:
 	npm version prerelease --preid=rc
 	npm publish --tag next
 
-templates/crud.diff: templates/crud/src templates/crud-foobar/src
+templates/crud.diff: $(shell find templates/crud/src templates/crud-foobar/src -type f)
 	@diff -Npar -U 2 --exclude=Auto.elm templates/crud/src templates/crud-foobar/src > templates/crud.diff || printf ""

@@ -55,7 +55,7 @@ pagePath page =
 
 pageRouter : Url.Parser.Parser (Page -> a) a
 pageRouter =
-    List.foldl (Url.Parser.s >> (</>)) Url.Parser.top mountPath
+    List.foldr (Url.Parser.s >> (</>)) Url.Parser.top mountPath
         </> Url.Parser.oneOf
                 [ Url.Parser.map ListingPage Url.Parser.top
                 , Url.Parser.map NewPage (Url.Parser.s "New")
