@@ -32,6 +32,7 @@
   "files": [
     "templates/**/*.js",
     "templates/*/Makefile",
+    "templates/*/scripts/wait-for-changes.js",
     "templates/*/src",
     "templates/*/public",
     "templates/crud.diff",
