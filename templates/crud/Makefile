@@ -23,6 +23,7 @@ src/Protocol/Auto.elm: $(shell find src/Protocol.elm src/Protocol -iname '*.elm'
 	EXTRA_IMPORT='Extra.Codec exposing (..)' \
 	GENERATED_SRC=src \
 	WATCHING=false \
+	PATH='node_modules/.bin:${PATH}' \
 	elm-auto-encoder-decoder `find src/Protocol.elm src/Protocol -iname '*.elm' | grep -v Auto.elm`
 
 build/Server.js: src/*.elm src/**/*.elm

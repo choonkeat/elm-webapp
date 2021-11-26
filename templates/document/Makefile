@@ -22,7 +22,7 @@ src/Protocol/Auto.elm: src/Protocol.elm
 	#
 	# read more at https://github.com/choonkeat/elm-auto-encoder-decoder
 	#
-	WATCHING=false elm-auto-encoder-decoder src/Protocol.elm
+	WATCHING=false PATH='node_modules/.bin:${PATH}' elm-auto-encoder-decoder src/Protocol.elm
 
 build/Server.js: src/*.elm src/**/*.elm
 	elm make src/Server.elm --output build/Server.js
