@@ -6,8 +6,8 @@ watch:
 	#
 	# ctrl-c to shutdown gracefully
 	#
-	until make compile; do node scripts/wait-for-changes.js .; done
-	until node index.js --watch; do until make compile; do node scripts/wait-for-changes.js .; done; done
+	until make compile; do make wait-for-changes; done
+	until node index.js --watch; do until make compile; do make wait-for-changes; done; done
 
 # like `make watch` but without file watching loop
 run: compile
@@ -34,7 +34,7 @@ public/assets/client.js: src/*.elm src/**/*.elm
 
 #
 
-install: elm.json package.json
+install: install-wait-for-changes elm.json package.json
 	yes | elm install elm/url > /dev/null
 	yes | elm install elm/json > /dev/null
 	yes | elm install elm/http > /dev/null
@@ -51,6 +51,13 @@ package.json:
 	npm init -y
 	npm install --save xhr2 full-url node-static websocket
 	npm install --save-dev elm-auto-encoder-decoder
+
+install-wait-for-changes:
+	@test "`uname`" != "Linux" || which inotifywait || (printf "\nyou will need \"inotifywait\" by installing \"inotify-tools\" with your package manager\n\n\te.g. apk add inotify-tools\n\t     apt-get install inotify-tools\n\n"; exit 1)
+
+wait-for-changes:
+	echo Waiting for file changes...
+	@if test "`uname`" = "Linux"; then inotifywait -r -e close_write -e move -e create -e delete .; else node scripts/wait-for-changes.js .; fi
 
 #
 
